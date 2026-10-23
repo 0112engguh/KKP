@@ -1,0 +1,8 @@
+# File upload gambar soal tidak ikut di-commit
+uploads/soal/*
+!uploads/soal/.htaccess
+# File bawaan sistem / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
