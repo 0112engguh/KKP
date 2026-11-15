@@ -6,12 +6,13 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
-$kelas_semua = semua_kelas();
-if (!$kelas_semua) {
-    flash('warning', 'Belum ada kelas.');
-    redirect(url('guru/kelas.php'));
-}
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 $kelas_id = (int) ($_GET['kelas_id'] ?? $kelas_semua[0]['id']);
+if (!punya_kelas($kelas_semua, $kelas_id)) {
+    flash('danger', 'Kelas tidak termasuk penugasan Anda.');
+    redirect(url('guru/absensi-rekap.php'));
+}
 $periode = ambil_periode($_GET);
 $rekap = rekap_absensi_kelas($kelas_id, $periode['dari'], $periode['sampai']);
 
@@ -51,7 +52,7 @@ $qs_dasar = ['kelas_id' => $kelas_id, 'jenis' => $periode['jenis'], 'tanggal' =>
         <h2>Rekap <?= e($periode['label']) ?></h2>
         <?php if ($jumlah['total'] > 0): ?>
             <div class="grafik" data-grafik="donat" data-labels='["Hadir","Izin","Sakit","Alpa"]'
-                 data-values='[<?= $jumlah['hadir'] ?>,<?= $jumlah['izin'] ?>,<?= $jumlah['sakit'] ?>,<?= $jumlah['alpa'] ?>]'
+                 data-values='[<?= (int) $jumlah['hadir'] ?>,<?= (int) $jumlah['izin'] ?>,<?= (int) $jumlah['sakit'] ?>,<?= (int) $jumlah['alpa'] ?>]'
                  data-warna='["#16a34a","#2563eb","#eab308","#dc2626"]'></div>
             <p class="teks-tengah">Persentase kehadiran kelas: <strong><?= angka(persen($jumlah['hadir'], $jumlah['total'])) ?>%</strong></p>
         <?php else: ?>
@@ -76,8 +77,8 @@ $qs_dasar = ['kelas_id' => $kelas_id, 'jenis' => $periode['jenis'], 'tanggal' =>
             <?php foreach ($rekap as $i => $r): ?>
                 <tr>
                     <td><?= $i + 1 ?></td><td><?= e($r['nisn']) ?></td><td><strong><?= e($r['nama']) ?></strong></td>
-                    <td class="angka"><?= $r['hadir'] ?></td><td class="angka"><?= $r['izin'] ?></td><td class="angka"><?= $r['sakit'] ?></td><td class="angka"><?= $r['alpa'] ?></td>
-                    <td class="angka"><?= $r['total'] ?></td>
+                    <td class="angka"><?= (int) $r['hadir'] ?></td><td class="angka"><?= (int) $r['izin'] ?></td><td class="angka"><?= (int) $r['sakit'] ?></td><td class="angka"><?= (int) $r['alpa'] ?></td>
+                    <td class="angka"><?= (int) $r['total'] ?></td>
                     <td class="angka"><?= $r['total'] ? pill(angka($r['persen']) . '%', $r['persen'] >= 90 ? 'hijau' : ($r['persen'] >= 75 ? 'kuning' : 'merah')) : '-' ?></td>
                     <td><a class="btn btn-light btn-sm" href="?<?= e(http_build_query($qs_dasar + ['siswa' => $r['id']])) ?>#detail">Lihat</a></td>
                 </tr>
@@ -91,8 +92,8 @@ $qs_dasar = ['kelas_id' => $kelas_id, 'jenis' => $periode['jenis'], 'tanggal' =>
 <?php if ($detail): ?>
 <section class="card" id="detail">
     <h2>Detail Kehadiran: <?= e($detail['siswa']['nama']) ?></h2>
-    <p>Periode <?= e($periode['label']) ?> &middot; Hadir <?= $detail['siswa']['hadir'] ?>, Izin <?= $detail['siswa']['izin'] ?>,
-        Sakit <?= $detail['siswa']['sakit'] ?>, Alpa <?= $detail['siswa']['alpa'] ?> (<?= angka($detail['siswa']['persen']) ?>%)</p>
+    <p>Periode <?= e($periode['label']) ?> &middot; Hadir <?= (int) $detail['siswa']['hadir'] ?>, Izin <?= (int) $detail['siswa']['izin'] ?>,
+        Sakit <?= (int) $detail['siswa']['sakit'] ?>, Alpa <?= (int) $detail['siswa']['alpa'] ?> (<?= angka($detail['siswa']['persen']) ?>%)</p>
     <div class="tabel-wrap">
         <table class="tabel">
             <thead><tr><th>Tanggal</th><th>Status</th></tr></thead>

@@ -35,7 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'hapus')
 }
 
 $daftar = db()->query("SELECT g.id, g.nip, g.nama, g.email, r.nama_role,
-        (SELECT GROUP_CONCAT(k.nama_kelas SEPARATOR ', ') FROM kelas k WHERE k.wali_kelas_id = g.id) AS wali_kelas
+        (SELECT GROUP_CONCAT(k.nama_kelas SEPARATOR ', ') FROM kelas k WHERE k.wali_kelas_id = g.id) AS wali_kelas,
+        (SELECT GROUP_CONCAT(kk.nama_kelas ORDER BY kk.tingkat, kk.nama_kelas SEPARATOR ', ')
+             FROM guru_kelas gk JOIN kelas kk ON kk.id = gk.kelas_id WHERE gk.guru_id = g.id) AS kelas_tugas
     FROM guru g JOIN users u ON u.id = g.user_id JOIN roles r ON r.id = u.role_id ORDER BY r.id, g.nama")->fetchAll();
 
 $judul = 'Data Guru';
@@ -45,7 +47,7 @@ require __DIR__ . '/../includes/header.php';
 <section class="card">
     <div class="tabel-wrap">
         <table class="tabel">
-            <thead><tr><th>No</th><th>NIP</th><th>Nama</th><th>Email</th><th>Role</th><th>Wali Kelas</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>No</th><th>NIP</th><th>Nama</th><th>Email</th><th>Role</th><th>Wali Kelas</th><th>Kelas Ditugaskan</th><th>Aksi</th></tr></thead>
             <tbody>
             <?php foreach ($daftar as $i => $g): ?>
                 <tr>
@@ -55,6 +57,7 @@ require __DIR__ . '/../includes/header.php';
                     <td><?= e($g['email'] ?? '-') ?></td>
                     <td><?= pill(nama_role($g['nama_role']), $g['nama_role'] === 'admin' ? 'biru' : 'hijau') ?></td>
                     <td><?= e($g['wali_kelas'] ?? '-') ?></td>
+                    <td><small><?= e($g['kelas_tugas'] ?? '-') ?></small></td>
                     <td>
                         <div class="aksi-baris">
                             <a class="btn btn-light btn-sm" href="<?= e(url('guru/guru-form.php?id=' . (int) $g['id'])) ?>">Ubah</a>

@@ -21,11 +21,11 @@ function login_gagal(string $peran, string $username, string $pesan = 'Login gag
     $_SESSION['login_peran'] = $peran;
     $_SESSION['login_username'] = $username;
     flash('danger', $pesan);
-    redirect(url('auth/login.php'));
+    redirect(url('auth/login.php?peran=' . $peran));
 }
 
 if (!isset($peta_role[$peran]) || $username === '' || $password === '') {
-    login_gagal('guru', $username, 'Login gagal. Lengkapi peran, username, dan password.');
+    login_gagal(isset($peta_role[$peran]) ? $peran : 'siswa', $username, 'Login gagal. Lengkapi peran, username, dan password.');
 }
 
 $id_role = implode(',', $peta_role[$peran]); // angka tetap dari array di atas, aman

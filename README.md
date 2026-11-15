@@ -50,7 +50,7 @@ HTML5, CSS3 (CSS Variables, Flexbox, Grid, Media Query), JavaScript Vanilla, PHP
 2. Klik tab **Import** di bagian atas.
 3. Klik **Choose File**, pilih `C:\xampp\htdocs\kkp-sd\database\database.sql`.
 4. Gulir ke bawah, klik **Import** (atau **Go**).
-5. Tunggu muncul tanda centang hijau. Di sisi kiri akan ada database baru bernama **`kkp_sd`** berisi 21 tabel beserta data dummy.
+5. Tunggu muncul tanda centang hijau. Di sisi kiri akan ada database baru bernama **`kkp_sd`** berisi 22 tabel beserta data dummy.
 
 > File `database.sql` sudah memuat perintah `CREATE DATABASE`, jadi Anda tidak perlu membuat database manual.
 
@@ -123,8 +123,10 @@ kkp-sd/
 ├── siswa/                   # area Siswa (dashboard, ujian, kebiasaan, badge)
 ├── orangtua/                # area Orang Tua
 ├── laporan/                 # 4 laporan + export
-├── uploads/soal/            # gambar soal (PHP tidak boleh dijalankan di sini)
-├── database/database.sql    # skema + data dummy
+├── uploads/
+│   ├── soal/                # gambar soal (PHP diblokir .htaccess)
+│   └── jurnal/              # foto bukti kebiasaan (PHP diblokir .htaccess)
+├── database/database.sql    # skema 22 tabel + data dummy
 └── index.php
 ```
 
@@ -132,7 +134,7 @@ Penyesuaian dari struktur awal: folder `admin/` digabung ke `guru/` karena Admin
 
 ## 7. Struktur Database
 
-Database `kkp_sd` (21 tabel, InnoDB, utf8mb4, `snake_case`, 3NF).
+Database `kkp_sd` (22 tabel, InnoDB, utf8mb4, `snake_case`, 3NF).
 
 ```mermaid
 erDiagram
@@ -140,6 +142,8 @@ erDiagram
     users ||--o| guru : profil
     users ||--o| siswa : profil
     users ||--o| orang_tua : profil
+    guru ||--o{ guru_kelas : ditugaskan
+    guru_kelas ||--o{ kelas : penugasan
     guru ||--o{ kelas : wali
     kelas ||--o{ siswa : berisi
     orang_tua ||--o{ siswa : wali_dari

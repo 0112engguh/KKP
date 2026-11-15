@@ -1,6 +1,10 @@
-# File upload gambar soal tidak ikut di-commit
+# File upload gambar soal & jurnal tidak ikut di-commit
 uploads/soal/*
 !uploads/soal/.htaccess
+uploads/jurnal/*
+!uploads/jurnal/.htaccess
+!uploads/.htaccess
+
 # File bawaan sistem / editor
 .DS_Store
 Thumbs.db

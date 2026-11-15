@@ -15,6 +15,7 @@ define('DB_PASS', '');
 
 // Folder upload gambar soal
 define('UPLOAD_SOAL_DIR', dirname(__DIR__) . '/uploads/soal/');
+define('UPLOAD_JURNAL_DIR', dirname(__DIR__) . '/uploads/jurnal/');
 define('UPLOAD_MAKS_BYTE', 1024 * 1024); // 1 MB
 
 // Alamat dasar aplikasi, dihitung otomatis dari lokasi folder project.

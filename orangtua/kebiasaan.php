@@ -24,14 +24,14 @@ echo html_pilih_anak($semua_anak, $anak);
 <div class="grid-2">
     <section class="card teks-tengah">
         <div class="stat-label">Total Poin <?= e($anak['nama']) ?></div>
-        <div class="nilai-besar"><i class="bi bi-star-fill"></i> <?= $poin ?></div>
+        <div class="nilai-besar"><i class="bi bi-star-fill"></i> <?= (int) $poin ?></div>
         <p>
             <?php foreach ($badge['semua'] as $b): if ($b['diraih']): ?>
                 <span class="pill pill-kuning" title="<?= e($b['deskripsi']) ?>"><?= ikon_badge($b['ikon']) ?> <?= e($b['nama_badge']) ?></span>
             <?php endif; endforeach; ?>
             <?php if (!$badge['jumlah_diraih']): ?><small>Belum ada badge.</small><?php endif; ?>
         </p>
-        <?php if ($badge['berikut']): ?><small>Menuju <?= e($badge['berikut']['nama_badge']) ?>: <?= $poin ?>/<?= (int) $badge['berikut']['minimal_poin'] ?> poin</small><?php endif; ?>
+        <?php if ($badge['berikut']): ?><small>Menuju <?= e($badge['berikut']['nama_badge']) ?>: <?= (int) $poin ?>/<?= (int) $badge['berikut']['minimal_poin'] ?> poin</small><?php endif; ?>
     </section>
     <section class="card">
         <h2>Grafik 14 Hari Terakhir</h2>

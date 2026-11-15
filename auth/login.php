@@ -8,24 +8,34 @@ if (user()) {
     redirect(halaman_beranda(user()['role']));
 }
 
-$peran_lama = $_SESSION['login_peran'] ?? 'guru';
 $user_lama  = $_SESSION['login_username'] ?? '';
 unset($_SESSION['login_peran'], $_SESSION['login_username']);
+
+// Mode: ?peran=... (default siswa). Form guru ada di login-guru.php.
+$peran_tetap = $_GET['peran'] ?? 'siswa';
+if (!in_array($peran_tetap, ['guru', 'siswa', 'orangtua'], true)) $peran_tetap = 'siswa';
+$info_username = ['guru'     => ['NIP', 'Guru/Admin masuk dengan NIP.'],
+                  'siswa'    => ['NISN', 'Siswa masuk dengan NISN.'],
+                  'orangtua' => ['NISN Anak', 'Orang tua masuk dengan NISN anak dan password orang tua.']];
+$judul_halaman = ['guru' => 'Login Guru / Admin', 'siswa' => 'Login Siswa', 'orangtua' => 'Login Orang Tua'];
+$labelUser = $info_username[$peran_tetap][0];
+$petunjuk  = $info_username[$peran_tetap][1];
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - <?= e(APP_SEKOLAH) ?></title>
+    <title><?= $peran_tetap ? e($judul_halaman[$peran_tetap]) . ' - ' : '' ?><?= e(APP_SEKOLAH) ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= e(url('assets/icons/favicon.svg')) ?>">
     <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
 </head>
-<body class="halaman-login">
+<body class="halaman-login <?= $peran_tetap ? 'halaman-login-' . e($peran_tetap) : '' ?>">
 <main class="login-wrap">
     <section class="login-card">
         <img src="<?= e(url('assets/images/logo.svg')) ?>" alt="Logo sekolah" width="72" height="72">
         <h1><?= e(APP_SEKOLAH) ?></h1>
+        <?php if ($peran_tetap): ?><p class="login-role"><?= e($judul_halaman[$peran_tetap]) ?></p><?php endif; ?>
         <p class="login-sub">Sistem Informasi Akademik &amp; Monitoring 7 Kebiasaan Anak Indonesia Hebat</p>
 
         <?php foreach (ambil_flash() as $f): ?>
@@ -35,19 +45,12 @@ unset($_SESSION['login_peran'], $_SESSION['login_username']);
         <form method="post" action="<?= e(url('auth/proses-login.php')) ?>" autocomplete="off">
             <?= csrf_field() ?>
 
-            <div class="pilih-peran" role="radiogroup" aria-label="Masuk sebagai">
-                <?php foreach (['guru' => 'Guru / Admin', 'siswa' => 'Siswa', 'orangtua' => 'Orang Tua'] as $kode => $label): ?>
-                    <label class="chip">
-                        <input type="radio" name="peran" value="<?= $kode ?>" <?= $peran_lama === $kode ? 'checked' : '' ?>>
-                        <span><?= $label ?></span>
-                    </label>
-                <?php endforeach; ?>
-            </div>
+            <input type="hidden" name="peran" value="<?= e($peran_tetap) ?>">
 
             <div class="form-grup">
-                <label for="username" id="labelUsername">NIP</label>
+                <label for="username" id="labelUsername"><?= e($labelUser) ?></label>
                 <input type="text" id="username" name="username" value="<?= e($user_lama) ?>" inputmode="numeric" required autofocus>
-                <small id="petunjukUsername" class="petunjuk">Guru/Admin masuk dengan NIP.</small>
+                <small id="petunjukUsername" class="petunjuk"><?= e($petunjuk) ?></small>
             </div>
             <div class="form-grup">
                 <label for="password">Password</label>
@@ -55,22 +58,20 @@ unset($_SESSION['login_peran'], $_SESSION['login_username']);
             </div>
             <button type="submit" class="btn btn-primary btn-blok">Masuk</button>
         </form>
+
+        <nav class="login-pindah" aria-label="Pilihan login lain">
+            <?php if ($peran_tetap === 'siswa'): ?>
+                <a href="<?= e(url('auth/login.php?peran=guru')) ?>">Masuk sebagai Guru / Admin &rarr;</a>
+                <a href="<?= e(url('auth/login.php?peran=orangtua')) ?>">Masuk sebagai Orang Tua &rarr;</a>
+            <?php elseif ($peran_tetap === 'guru'): ?>
+                <a href="<?= e(url('auth/login.php?peran=siswa')) ?>">&larr; Masuk sebagai Siswa</a>
+                <a href="<?= e(url('auth/login.php?peran=orangtua')) ?>">Masuk sebagai Orang Tua &rarr;</a>
+            <?php else: ?>
+                <a href="<?= e(url('auth/login.php?peran=siswa')) ?>">&larr; Masuk sebagai Siswa</a>
+                <a href="<?= e(url('auth/login.php?peran=guru')) ?>">Masuk sebagai Guru / Admin &rarr;</a>
+            <?php endif; ?>
+        </nav>
     </section>
 </main>
-<script>
-    // Ubah label kolom sesuai peran yang dipilih
-    var info = {
-        guru:     ['NIP', 'Guru/Admin masuk dengan NIP.'],
-        siswa:    ['NISN', 'Siswa masuk dengan NISN.'],
-        orangtua: ['NISN Anak', 'Orang tua masuk dengan NISN anak dan password orang tua.']
-    };
-    function ubahLabel() {
-        var dipilih = document.querySelector('input[name="peran"]:checked').value;
-        document.getElementById('labelUsername').textContent = info[dipilih][0];
-        document.getElementById('petunjukUsername').textContent = info[dipilih][1];
-    }
-    document.querySelectorAll('input[name="peran"]').forEach(function (r) { r.addEventListener('change', ubahLabel); });
-    ubahLabel();
-</script>
 </body>
 </html>

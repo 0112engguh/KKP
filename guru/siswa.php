@@ -5,17 +5,21 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 
 // ----- Hapus siswa -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'hapus') {
     csrf_cek();
     $id = (int) ($_POST['id'] ?? 0);
-    $st = db()->prepare('SELECT user_id, orang_tua_id FROM siswa WHERE id = :id');
+    $st = db()->prepare('SELECT user_id, orang_tua_id, kelas_id FROM siswa WHERE id = :id');
     $st->execute(['id' => $id]);
     $s = $st->fetch();
 
     if (!$s) {
         flash('danger', 'Data tidak ditemukan.');
+    } elseif (!punya_kelas($kelas_semua, (int) $s['kelas_id'])) {
+        flash('danger', 'Siswa tidak termasuk kelas yang ditugaskan kepada Anda.');
     } else {
         $pdo = db();
         try {
@@ -54,9 +58,16 @@ if ($cari !== '') {
     $where .= ' AND (s.nama LIKE :cari1 OR s.nisn LIKE :cari2)';
     $param['cari1'] = $param['cari2'] = '%' . $cari . '%';
 }
+if ($kelas_id > 0 && !punya_kelas($kelas_semua, $kelas_id)) {
+    flash('danger', 'Kelas tidak termasuk penugasan Anda.');
+    redirect(url('guru/siswa.php'));
+}
 if ($kelas_id > 0) {
     $where .= ' AND s.kelas_id = :kelas';
     $param['kelas'] = $kelas_id;
+} elseif (user()['role'] !== 'admin') {
+    $ids = array_map('intval', array_column($kelas_semua, 'id'));
+    $where .= ' AND s.kelas_id IN (' . implode(',', $ids) . ')';
 }
 
 $total = (int) skalar('SELECT COUNT(*) FROM siswa s' . $where, $param);
@@ -86,7 +97,7 @@ require __DIR__ . '/../includes/header.php';
             <label for="kelas">Kelas</label>
             <select name="kelas" id="kelas">
                 <option value="0">Semua kelas</option>
-                <?php foreach (semua_kelas() as $k): ?>
+                <?php foreach ($kelas_semua as $k): ?>
                     <option value="<?= (int) $k['id'] ?>" <?= $kelas_id === (int) $k['id'] ? 'selected' : '' ?>><?= e($k['nama_kelas']) ?></option>
                 <?php endforeach; ?>
             </select>
@@ -130,10 +141,10 @@ require __DIR__ . '/../includes/header.php';
         <div class="toolbar mt">
             <?php for ($h = 1; $h <= $jml_halaman; $h++):
                 $qs = http_build_query(['q' => $cari, 'kelas' => $kelas_id, 'hal' => $h]); ?>
-                <a class="btn btn-sm <?= $h === $halaman ? 'btn-primary' : 'btn-light' ?>" href="?<?= e($qs) ?>"><?= $h ?></a>
+                <a class="btn btn-sm <?= $h === $halaman ? 'btn-primary' : 'btn-light' ?>" href="?<?= e($qs) ?>"><?= (int) $h ?></a>
             <?php endfor; ?>
         </div>
     <?php endif; ?>
-    <small>Total <?= $total ?> siswa.</small>
+    <small>Total <?= (int) $total ?> siswa.</small>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

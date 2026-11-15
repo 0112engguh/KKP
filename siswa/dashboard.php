@@ -37,7 +37,7 @@ require __DIR__ . '/../includes/header.php';
     <div class="stat hijau"><div class="stat-label">Kehadiran</div><div class="stat-nilai"><?= angka($absen['persen']) ?>%</div><div class="stat-catatan"><?= e($sem['label']) ?></div></div>
     <div class="stat kuning"><div class="stat-label">Ujian Aktif</div><div class="stat-nilai"><?= count($ujian_aktif) ?></div><div class="stat-catatan"><a href="<?= e(url('siswa/ujian.php')) ?>">Lihat ujian</a></div></div>
     <div class="stat"><div class="stat-label">Nilai TKA Terbaru</div><div class="stat-nilai"><?= $riwayat ? angka($riwayat[0]['nilai']) : '-' ?></div><div class="stat-catatan"><?= $riwayat ? e($riwayat[0]['nama_ujian']) : 'Belum ada nilai' ?></div></div>
-    <div class="stat hijau"><div class="stat-label">Total Poin</div><div class="stat-nilai"><i class="bi bi-star-fill"></i> <?= $poin ?></div></div>
+    <div class="stat hijau"><div class="stat-label">Total Poin</div><div class="stat-nilai"><i class="bi bi-star-fill"></i> <?= (int) $poin ?></div></div>
     <div class="stat kuning"><div class="stat-label">Badge Terbaru</div><div class="stat-nilai" style="font-size:1.2rem"><?= $diraih ? ikon_badge(end($diraih)['ikon']) . ' ' . e(end($diraih)['nama_badge']) : 'Belum ada' ?></div></div>
 </div>
 

@@ -52,7 +52,7 @@ $warna_tingkat = ['mudah' => 'hijau', 'sedang' => 'kuning', 'sulit' => 'merah'];
         <div class="form-grup"><label for="tingkat">Tingkat</label>
             <select name="tingkat" id="tingkat"><option value="">Semua</option>
                 <?php foreach (['mudah', 'sedang', 'sulit'] as $t): ?>
-                    <option value="<?= $t ?>" <?= $tingkat === $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
+                    <option value="<?= e($t) ?>" <?= $tingkat === $t ? 'selected' : '' ?>><?= e(ucfirst($t)) ?></option>
                 <?php endforeach; ?>
             </select></div>
         <div class="form-grup"><label for="q">Cari pertanyaan</label>

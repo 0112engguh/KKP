@@ -20,6 +20,15 @@ if ($id > 0) {
 }
 $diri_sendiri = $id > 0 && (int) $data['user_id'] === (int) $pengguna_login['id'];
 
+$daftar_kelas = semua_kelas();
+$izin_kelas   = array_map('intval', array_column($daftar_kelas, 'id'));
+$kelas_tugas  = [];
+if ($id > 0) {
+    $st = db()->prepare('SELECT kelas_id FROM guru_kelas WHERE guru_id = :g');
+    $st->execute(['g' => $id]);
+    $kelas_tugas = array_map('intval', array_column($st->fetchAll(), 'kelas_id'));
+}
+
 $galat = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_cek();
@@ -30,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password      = $_POST['password'] ?? '';
     if ($diri_sendiri) $role_baru = (int) $data['role_id']; // tidak boleh mengubah role sendiri
     $data['role_id'] = in_array($role_baru, [1, 2], true) ? $role_baru : 2;
+    $kelas_pilih = array_values(array_intersect(array_map('intval', $_POST['kelas'] ?? []), $izin_kelas));
+    $kelas_tugas = $kelas_pilih;
 
     if (!preg_match('/^\d{8,20}$/', $data['nip'])) $galat[] = 'NIP harus berupa angka (8-20 digit).';
     if ($data['nama'] === '') $galat[] = 'Nama wajib diisi.';
@@ -51,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $uid = (int) $pdo->lastInsertId();
                 $pdo->prepare('INSERT INTO guru (user_id, nip, nama, email) VALUES (:u, :nip, :nama, :email)')
                     ->execute(['u' => $uid, 'nip' => $data['nip'], 'nama' => $data['nama'], 'email' => $email]);
+                $gid = (int) $pdo->lastInsertId();
             } else {
+                $gid = $id;
                 $pdo->prepare('UPDATE guru SET nip = :nip, nama = :nama, email = :email WHERE id = :id')
                     ->execute(['nip' => $data['nip'], 'nama' => $data['nama'], 'email' => $email, 'id' => $id]);
                 $pdo->prepare('UPDATE users SET username = :u, role_id = :r WHERE id = :id')
@@ -61,6 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ->execute(['p' => password_hash($password, PASSWORD_DEFAULT), 'id' => $data['user_id']]);
                 }
             }
+            // Penugasan kelas: ganti seluruh pilihan
+            $pdo->prepare('DELETE FROM guru_kelas WHERE guru_id = :g')->execute(['g' => $gid]);
+            $tugas = $pdo->prepare('INSERT INTO guru_kelas (guru_id, kelas_id) VALUES (:g, :k)');
+            foreach ($kelas_pilih as $kid) $tugas->execute(['g' => $gid, 'k' => $kid]);
             $pdo->commit();
             flash('success', 'Data berhasil disimpan.');
             redirect(url('guru/guru.php'));
@@ -98,6 +115,11 @@ require __DIR__ . '/../includes/header.php';
     <div class="form-grup"><label for="password">Password <?= $id ? '' : '*' ?></label>
         <input type="password" id="password" name="password" autocomplete="new-password" <?= $id ? '' : 'required' ?>>
         <?php if ($id): ?><small>Kosongkan bila tidak ingin mengubah password.</small><?php endif; ?></div>
+    <div class="form-grup"><label>Kelas yang Ditugaskan</label>
+        <?php foreach ($daftar_kelas as $k): ?>
+            <label class="cek-baris"><input type="checkbox" name="kelas[]" value="<?= (int) $k['id'] ?>" <?= in_array((int) $k['id'], $kelas_tugas, true) ? 'checked' : '' ?>> <?= e($k['nama_kelas']) ?></label>
+        <?php endforeach; ?>
+        <small>Guru hanya bisa mengatur siswa, absensi, jurnal, dan ujian untuk kelas yang dicentang.</small></div>
     <button type="submit" class="btn btn-primary">Simpan</button>
     <a class="btn btn-light" href="<?= e(url('guru/guru.php')) ?>">Batal</a>
 </form>

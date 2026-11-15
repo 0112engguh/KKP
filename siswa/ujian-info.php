@@ -72,7 +72,7 @@ require __DIR__ . '/../includes/header.php';
         <?php endif; ?>
     <?php else: ?>
         <form method="post">
-            <?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>">
+            <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $id ?>">
             <button type="submit" class="btn btn-success"><?= $ujian['kondisi'] === 'berlangsung' ? '<i class="bi bi-play-fill"></i> Lanjutkan Ujian' : '<i class="bi bi-rocket-fill"></i> Mulai Ujian' ?></button>
         </form>
     <?php endif; ?>

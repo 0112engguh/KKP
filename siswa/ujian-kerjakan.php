@@ -52,9 +52,9 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <form method="post" action="<?= e(url('siswa/ujian-submit.php')) ?>" id="formUjian"
       data-sisa="<?= (int) $sisa ?>" data-url-simpan="<?= e(url('siswa/ujian-simpan.php')) ?>"
-      data-hasil="<?= $hasil_id ?>" data-csrf="<?= e(csrf_token()) ?>">
+      data-hasil="<?= (int) $hasil_id ?>" data-csrf="<?= e(csrf_token()) ?>">
     <?= csrf_field() ?>
-    <input type="hidden" name="hasil_id" value="<?= $hasil_id ?>">
+    <input type="hidden" name="hasil_id" value="<?= (int) $hasil_id ?>">
 
     <div class="ujian-bar">
         <div><strong><?= e($hasil['nama_ujian']) ?></strong><br><small><?= e($hasil['nama_mapel']) ?> &middot; <?= count($soal) ?> soal</small></div>
@@ -65,7 +65,7 @@ require __DIR__ . '/../includes/header.php';
         <section class="card">
             <?php foreach ($soal as $i => $s): $j = $jawab[$s['id']] ?? ['jawaban' => null, 'ragu' => 0]; ?>
                 <div class="soal-panel<?= $i === 0 ? ' tampil' : '' ?>" data-index="<?= $i ?>" data-soal="<?= (int) $s['id'] ?>">
-                    <strong>Soal <?= $i + 1 ?> dari <?= count($soal) ?></strong>
+                    <strong>Soal <?= (int) ($i + 1) ?> dari <?= count($soal) ?></strong>
                     <div class="soal-teks"><?= e($s['pertanyaan']) ?></div>
                     <?php if ($s['gambar']): ?><img class="soal-gambar" src="<?= e(url('uploads/soal/' . $s['gambar'])) ?>" alt="Gambar soal"><?php endif; ?>
                     <?php foreach ($opsi[$s['id']] ?? [] as $label => $teks): ?>
@@ -91,7 +91,7 @@ require __DIR__ . '/../includes/header.php';
             <h3>Navigasi Soal</h3>
             <div class="nav-soal">
                 <?php foreach ($soal as $i => $s): ?>
-                    <button type="button" data-ke="<?= $i ?>"><?= $i + 1 ?></button>
+                    <button type="button" data-ke="<?= (int) $i ?>"><?= (int) ($i + 1) ?></button>
                 <?php endforeach; ?>
             </div>
             <div class="nav-ket">

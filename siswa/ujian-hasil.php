@@ -47,7 +47,7 @@ $nilai = (float) $hasil['nilai'];
         <?php if ($s['gambar']): ?><img class="soal-gambar" src="<?= e(url('uploads/soal/' . $s['gambar'])) ?>" alt="Gambar soal"><?php endif; ?>
         <?php foreach ($opsi[$s['id']] ?? [] as $label => $teks):
             $kelas = $label === $s['kunci_jawaban'] ? 'kunci' : ($label === $s['jawaban'] ? 'salah' : ''); ?>
-            <div class="opsi-hasil <?= $kelas ?>"><strong><?= e($label) ?>.</strong> <?= e($teks) ?>
+            <div class="opsi-hasil <?= e($kelas) ?>"><strong><?= e($label) ?>.</strong> <?= e($teks) ?>
                 <?= $label === $s['kunci_jawaban'] ? ' <i class="bi bi-check-lg"></i> (kunci)' : '' ?><?= $label === $s['jawaban'] && !$benar ? ' (jawabanmu)' : '' ?></div>
         <?php endforeach; ?>
         <?php if ($s['pembahasan']): ?><div class="pembahasan"><i class="bi bi-lightbulb-fill"></i> <?= e($s['pembahasan']) ?></div><?php endif; ?>

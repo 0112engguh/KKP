@@ -6,11 +6,21 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_cek();
     $id = (int) ($_POST['id'] ?? 0);
     $aksi = $_POST['aksi'] ?? '';
-    if ($aksi === 'hapus') {
+
+    $st = db()->prepare('SELECT kelas_id FROM ujian WHERE id = :id');
+    $st->execute(['id' => $id]);
+    $u_cek = $st->fetch();
+
+    if (!$u_cek || !punya_kelas($kelas_semua, (int) $u_cek['kelas_id'])) {
+        flash('danger', 'Ujian tidak termasuk kelas yang ditugaskan kepada Anda.');
+    } elseif ($aksi === 'hapus') {
         db()->prepare('DELETE FROM ujian WHERE id = :id')->execute(['id' => $id]);
         flash('success', 'Ujian berhasil dihapus.');
     } elseif ($aksi === 'status') {
@@ -24,10 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect(url('guru/ujian.php'));
 }
 
+$where_kelas = '';
+if (user()['role'] !== 'admin') {
+    $ids = array_map('intval', array_column($kelas_semua, 'id'));
+    $where_kelas = ' WHERE u.kelas_id IN (' . implode(',', $ids) . ')';
+}
+
 $daftar = db()->query("SELECT u.*, m.nama_mapel, k.nama_kelas,
         (SELECT COUNT(*) FROM ujian_soal us WHERE us.ujian_id = u.id) AS jml_soal,
         (SELECT COUNT(*) FROM hasil_ujian h WHERE h.ujian_id = u.id) AS jml_peserta
     FROM ujian u JOIN mata_pelajaran m ON m.id = u.mapel_id JOIN kelas k ON k.id = u.kelas_id
+    $where_kelas
     ORDER BY u.waktu_mulai DESC")->fetchAll();
 $sekarang = date('Y-m-d H:i:s');
 

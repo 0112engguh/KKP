@@ -6,11 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 $pengguna_login = wajib_role(['admin', 'guru']);
 
-$kelas_semua = semua_kelas();
-if (!$kelas_semua) {
-    flash('warning', 'Belum ada kelas. Tambahkan kelas terlebih dahulu.');
-    redirect(url('guru/kelas.php'));
-}
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 
 // Cek tanggal: format benar dan tidak boleh di masa depan
 function tanggal_valid(string $t): bool
@@ -20,6 +17,10 @@ function tanggal_valid(string $t): bool
 
 $sumber   = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : $_GET;
 $kelas_id = (int) ($sumber['kelas_id'] ?? $kelas_semua[0]['id']);
+if (!punya_kelas($kelas_semua, $kelas_id)) {
+    flash('danger', 'Kelas tidak termasuk penugasan Anda.');
+    redirect(url('guru/absensi.php'));
+}
 $tanggal  = (string) ($sumber['tanggal'] ?? date('Y-m-d'));
 if (!tanggal_valid($tanggal)) $tanggal = date('Y-m-d');
 
@@ -100,7 +101,7 @@ require __DIR__ . '/../includes/header.php';
 <?php else: ?>
 <form method="post" class="card" data-absensi-form>
     <?= csrf_field() ?>
-    <input type="hidden" name="kelas_id" value="<?= $kelas_id ?>">
+    <input type="hidden" name="kelas_id" value="<?= (int) $kelas_id ?>">
     <input type="hidden" name="tanggal" value="<?= e($tanggal) ?>">
     <div class="toolbar">
         <strong><?= e(hari_tgl_indo($tanggal)) ?></strong>
@@ -120,8 +121,8 @@ require __DIR__ . '/../includes/header.php';
                         <div class="pilih-absen">
                             <?php foreach (STATUS_ABSEN as $kode => $nama): ?>
                                 <label title="<?= e($nama) ?>">
-                                    <input type="radio" name="status[<?= (int) $s['id'] ?>]" value="<?= $kode ?>" <?= $pilihan === $kode ? 'checked' : '' ?>>
-                                    <span class="<?= strtolower($kode) ?>"><?= $kode ?></span>
+                                    <input type="radio" name="status[<?= (int) $s['id'] ?>]" value="<?= e($kode) ?>" <?= $pilihan === $kode ? 'checked' : '' ?>>
+                                    <span class="<?= e(strtolower($kode)) ?>"><?= e($kode) ?></span>
                                 </label>
                             <?php endforeach; ?>
                         </div>

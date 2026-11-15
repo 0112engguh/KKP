@@ -9,19 +9,33 @@ wajib_role(['admin', 'guru']);
 $sekarang = date('Y-m-d H:i:s');
 $bulan_ini = ambil_periode(['jenis' => 'bulanan']);
 
-$jml_siswa   = (int) skalar("SELECT COUNT(*) FROM siswa WHERE status = 'aktif'");
-$jml_kelas   = (int) skalar('SELECT COUNT(*) FROM kelas');
-$ujian_aktif = (int) skalar("SELECT COUNT(*) FROM ujian WHERE status = 'aktif' AND :now BETWEEN waktu_mulai AND waktu_selesai", ['now' => $sekarang]);
+$is_admin = user()['role'] === 'admin';
+$kelas_tugas = kelas_guru();
+$tugas_ids = array_map('intval', array_column($kelas_tugas, 'id'));
+$in_kelas = $tugas_ids ? implode(',', $tugas_ids) : '0';
+
+$jml_siswa   = $is_admin
+    ? (int) skalar("SELECT COUNT(*) FROM siswa WHERE status = 'aktif'")
+    : (int) skalar("SELECT COUNT(*) FROM siswa WHERE status = 'aktif' AND kelas_id IN ($in_kelas)");
+$jml_kelas   = $is_admin ? (int) skalar('SELECT COUNT(*) FROM kelas') : count($kelas_tugas);
+$ujian_aktif = $is_admin
+    ? (int) skalar("SELECT COUNT(*) FROM ujian WHERE status = 'aktif' AND :now BETWEEN waktu_mulai AND waktu_selesai", ['now' => $sekarang])
+    : (int) skalar("SELECT COUNT(*) FROM ujian WHERE status = 'aktif' AND kelas_id IN ($in_kelas) AND :now BETWEEN waktu_mulai AND waktu_selesai", ['now' => $sekarang]);
 $jml_soal    = (int) skalar('SELECT COUNT(*) FROM bank_soal');
-$rata_nilai  = (float) skalar("SELECT COALESCE(AVG(nilai), 0) FROM hasil_ujian WHERE status = 'selesai'");
-$jurnal_tunggu = (int) skalar("SELECT COUNT(*) FROM jurnal_kebiasaan WHERE status = 'menunggu'");
+$rata_nilai  = $is_admin
+    ? (float) skalar("SELECT COALESCE(AVG(nilai), 0) FROM hasil_ujian WHERE status = 'selesai'")
+    : (float) skalar("SELECT COALESCE(AVG(h.nilai), 0) FROM hasil_ujian h JOIN siswa s ON s.id = h.siswa_id WHERE h.status = 'selesai' AND s.kelas_id IN ($in_kelas)");
+$jurnal_tunggu = $is_admin
+    ? (int) skalar("SELECT COUNT(*) FROM jurnal_kebiasaan WHERE status = 'menunggu'")
+    : (int) skalar("SELECT COUNT(*) FROM jurnal_kebiasaan j JOIN siswa s ON s.id = j.siswa_id WHERE j.status = 'menunggu' AND s.kelas_id IN ($in_kelas)");
 
 // Ringkasan per kelas
+$where_k = $is_admin ? '' : " WHERE k.id IN ($in_kelas)";
 $kelas = db()->query("SELECT k.id, k.nama_kelas, g.nama AS wali,
         (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.status = 'aktif') AS jml_siswa,
         (SELECT AVG(h.nilai) FROM hasil_ujian h JOIN siswa s ON s.id = h.siswa_id WHERE s.kelas_id = k.id AND h.status = 'selesai') AS rata_nilai,
         (SELECT COUNT(*) FROM jurnal_kebiasaan j JOIN siswa s ON s.id = j.siswa_id WHERE s.kelas_id = k.id AND j.status = 'menunggu') AS menunggu
-    FROM kelas k LEFT JOIN guru g ON g.id = k.wali_kelas_id ORDER BY k.tingkat, k.nama_kelas")->fetchAll();
+    FROM kelas k LEFT JOIN guru g ON g.id = k.wali_kelas_id $where_k ORDER BY k.tingkat, k.nama_kelas")->fetchAll();
 
 $total = ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0, 'total' => 0];
 foreach ($kelas as &$k) {
@@ -40,12 +54,12 @@ $judul = 'Dashboard Guru';
 require __DIR__ . '/../includes/header.php';
 ?>
 <div class="grid-stat">
-    <div class="stat"><div class="stat-label">Jumlah Siswa</div><div class="stat-nilai"><?= $jml_siswa ?></div><div class="stat-catatan">siswa aktif</div></div>
-    <div class="stat hijau"><div class="stat-label">Jumlah Kelas</div><div class="stat-nilai"><?= $jml_kelas ?></div></div>
-    <div class="stat kuning"><div class="stat-label">Ujian Aktif</div><div class="stat-nilai"><?= $ujian_aktif ?></div><div class="stat-catatan">sedang dibuka</div></div>
-    <div class="stat"><div class="stat-label">Jumlah Soal</div><div class="stat-nilai"><?= $jml_soal ?></div><div class="stat-catatan">di bank soal</div></div>
+    <div class="stat"><div class="stat-label">Jumlah Siswa</div><div class="stat-nilai"><?= (int) $jml_siswa ?></div><div class="stat-catatan">siswa aktif</div></div>
+    <div class="stat hijau"><div class="stat-label">Jumlah Kelas</div><div class="stat-nilai"><?= (int) $jml_kelas ?></div></div>
+    <div class="stat kuning"><div class="stat-label">Ujian Aktif</div><div class="stat-nilai"><?= (int) $ujian_aktif ?></div><div class="stat-catatan">sedang dibuka</div></div>
+    <div class="stat"><div class="stat-label">Jumlah Soal</div><div class="stat-nilai"><?= (int) $jml_soal ?></div><div class="stat-catatan">di bank soal</div></div>
     <div class="stat hijau"><div class="stat-label">Rata-rata Nilai TKA</div><div class="stat-nilai"><?= angka($rata_nilai) ?></div></div>
-    <div class="stat <?= $jurnal_tunggu ? 'merah' : 'hijau' ?>"><div class="stat-label">Jurnal Menunggu</div><div class="stat-nilai"><?= $jurnal_tunggu ?></div>
+    <div class="stat <?= $jurnal_tunggu ? 'merah' : 'hijau' ?>"><div class="stat-label">Jurnal Menunggu</div><div class="stat-nilai"><?= (int) $jurnal_tunggu ?></div>
         <div class="stat-catatan"><a href="<?= e(url('guru/jurnal.php?status=menunggu')) ?>">Verifikasi sekarang</a></div></div>
 </div>
 
@@ -55,9 +69,9 @@ require __DIR__ . '/../includes/header.php';
         <?php if ($total['total'] > 0): ?>
             <div class="grafik" data-grafik="donat"
                  data-labels='["Hadir","Izin","Sakit","Alpa"]'
-                 data-values='[<?= $total['hadir'] ?>,<?= $total['izin'] ?>,<?= $total['sakit'] ?>,<?= $total['alpa'] ?>]'
+                 data-values='[<?= (int) $total['hadir'] ?>,<?= (int) $total['izin'] ?>,<?= (int) $total['sakit'] ?>,<?= (int) $total['alpa'] ?>]'
                  data-warna='["#16a34a","#2563eb","#eab308","#dc2626"]'></div>
-            <p class="teks-tengah">Persentase kehadiran seluruh kelas: <strong><?= angka(persen($total['hadir'], $total['total'])) ?>%</strong></p>
+            <p class="teks-tengah">Persentase kehadiran <?= $is_admin ? 'seluruh kelas' : 'kelas binaan' ?>: <strong><?= angka(persen($total['hadir'], $total['total'])) ?>%</strong></p>
         <?php else: ?>
             <div class="kosong">Belum ada data absensi bulan ini.</div>
         <?php endif; ?>

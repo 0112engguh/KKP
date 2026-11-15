@@ -6,8 +6,16 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
 $ujian_id = (int) ($_GET['ujian_id'] ?? 0);
-$daftar_ujian = db()->query('SELECT u.id, u.nama_ujian, k.nama_kelas FROM ujian u JOIN kelas k ON k.id = u.kelas_id ORDER BY u.waktu_mulai DESC')->fetchAll();
+$where_kelas = '';
+if (user()['role'] !== 'admin') {
+    $ids = array_map('intval', array_column($kelas_semua, 'id'));
+    $where_kelas = ' WHERE u.kelas_id IN (' . implode(',', $ids) . ')';
+}
+$daftar_ujian = db()->query("SELECT u.id, u.nama_ujian, k.nama_kelas FROM ujian u JOIN kelas k ON k.id = u.kelas_id $where_kelas ORDER BY u.waktu_mulai DESC")->fetchAll();
 if ($ujian_id === 0 && $daftar_ujian) $ujian_id = (int) $daftar_ujian[0]['id'];
 
 finalisasi_kadaluarsa($ujian_id ?: null);
@@ -19,6 +27,9 @@ if ($ujian_id > 0) {
     $st = db()->prepare('SELECT u.*, m.nama_mapel, k.nama_kelas FROM ujian u JOIN mata_pelajaran m ON m.id = u.mapel_id JOIN kelas k ON k.id = u.kelas_id WHERE u.id = :id');
     $st->execute(['id' => $ujian_id]);
     $ujian = $st->fetch();
+    if ($ujian && !punya_kelas($kelas_semua, (int) $ujian['kelas_id'])) {
+        $ujian = null;
+    }
 }
 if ($ujian) {
     $peserta = (int) skalar("SELECT COUNT(*) FROM hasil_ujian WHERE ujian_id = :u AND status = 'selesai'", ['u' => $ujian_id]);
@@ -57,7 +68,7 @@ require __DIR__ . '/../includes/header.php';
             </select></div>
         <noscript><button class="btn btn-primary" type="submit">Tampilkan</button></noscript>
     </form>
-    <?php if ($ujian): ?><p>Peserta yang sudah selesai: <strong><?= $peserta ?> siswa</strong>.
+    <?php if ($ujian): ?><p>Peserta yang sudah selesai: <strong><?= (int) $peserta ?> siswa</strong>.
         Tingkat kesukaran: Mudah (benar &ge; 70%), Sedang (40-69%), Sulit (&lt; 40%).</p><?php endif; ?>
 </section>
 

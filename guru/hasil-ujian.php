@@ -6,6 +6,9 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
 $ujian_id = (int) ($_GET['ujian_id'] ?? 0);
 finalisasi_kadaluarsa($ujian_id > 0 ? $ujian_id : null); // proses ujian yang waktunya habis
 
@@ -16,8 +19,8 @@ if ($ujian_id > 0) {
                          JOIN kelas k ON k.id = u.kelas_id WHERE u.id = :id');
     $st->execute(['id' => $ujian_id]);
     $ujian = $st->fetch();
-    if (!$ujian) {
-        flash('danger', 'Data tidak ditemukan.');
+    if (!$ujian || !punya_kelas($kelas_semua, (int) $ujian['kelas_id'])) {
+        flash('danger', 'Data tidak ditemukan atau di luar penugasan kelas Anda.');
         redirect(url('guru/hasil-ujian.php'));
     }
     $st = db()->prepare("SELECT s.nisn, s.nama, h.status, h.nilai, h.jumlah_benar, h.jumlah_salah, h.waktu_selesai
@@ -28,13 +31,20 @@ if ($ujian_id > 0) {
     $nilai = [];
     foreach ($baris as $b) if ($b['status'] === 'selesai') $nilai[] = (float) $b['nilai'];
 } else {
+    $where_kelas = '';
+    if (user()['role'] !== 'admin') {
+        $ids = array_map('intval', array_column($kelas_semua, 'id'));
+        $where_kelas = ' WHERE u.kelas_id IN (' . implode(',', $ids) . ')';
+    }
     $daftar = db()->query("SELECT u.id, u.nama_ujian, m.nama_mapel, k.nama_kelas,
             (SELECT COUNT(*) FROM hasil_ujian h WHERE h.ujian_id = u.id AND h.status = 'selesai') AS selesai,
             (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = u.kelas_id AND s.status = 'aktif') AS jml_siswa,
             (SELECT AVG(h.nilai) FROM hasil_ujian h WHERE h.ujian_id = u.id AND h.status = 'selesai') AS rata,
             (SELECT MAX(h.nilai) FROM hasil_ujian h WHERE h.ujian_id = u.id AND h.status = 'selesai') AS tertinggi,
             (SELECT MIN(h.nilai) FROM hasil_ujian h WHERE h.ujian_id = u.id AND h.status = 'selesai') AS terendah
-        FROM ujian u JOIN mata_pelajaran m ON m.id = u.mapel_id JOIN kelas k ON k.id = u.kelas_id ORDER BY u.waktu_mulai DESC")->fetchAll();
+        FROM ujian u JOIN mata_pelajaran m ON m.id = u.mapel_id JOIN kelas k ON k.id = u.kelas_id
+        $where_kelas
+        ORDER BY u.waktu_mulai DESC")->fetchAll();
 }
 
 $judul = $ujian ? 'Hasil: ' . $ujian['nama_ujian'] : 'Hasil Ujian';

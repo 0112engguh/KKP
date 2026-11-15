@@ -28,6 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $valid = array_column($daftar_kebiasaan, 'id');
     $dipilih = array_values(array_intersect($dipilih, array_map('intval', $valid)));
 
+    // Foto bukti (opsional): hapus foto lama bila diganti.
+    $foto = $jurnal['foto_jurnal'] ?? null;
+    try {
+        if (isset($_FILES['foto_jurnal']) && $_FILES['foto_jurnal']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $nama_foto = simpan_gambar(UPLOAD_JURNAL_DIR, $_FILES['foto_jurnal']);
+            if ($foto) @unlink(UPLOAD_JURNAL_DIR . $foto);
+            $foto = $nama_foto;
+        }
+    } catch (RuntimeException $e) {
+        flash('danger', $e->getMessage());
+        redirect(url('siswa/kebiasaan.php'));
+    }
+
     if (!$dipilih) {
         flash('warning', 'Centang minimal satu kebiasaan yang kamu lakukan hari ini.');
         redirect(url('siswa/kebiasaan.php'));
@@ -37,11 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
         if ($jurnal) {
             $jurnal_id = (int) $jurnal['id'];
-            $pdo->prepare("UPDATE jurnal_kebiasaan SET catatan_siswa = :c, status = 'menunggu' WHERE id = :id")
-                ->execute(['c' => $catatan !== '' ? mb_substr($catatan, 0, 255) : null, 'id' => $jurnal_id]);
+            $pdo->prepare("UPDATE jurnal_kebiasaan SET catatan_siswa = :c, foto_jurnal = :f, status = 'menunggu' WHERE id = :id")
+                ->execute(['c' => $catatan !== '' ? mb_substr($catatan, 0, 255) : null, 'f' => $foto, 'id' => $jurnal_id]);
         } else {
-            $pdo->prepare('INSERT INTO jurnal_kebiasaan (siswa_id, tanggal, catatan_siswa) VALUES (:s, :t, :c)')
-                ->execute(['s' => $sid, 't' => $hari_ini, 'c' => $catatan !== '' ? mb_substr($catatan, 0, 255) : null]);
+            $pdo->prepare('INSERT INTO jurnal_kebiasaan (siswa_id, tanggal, catatan_siswa, foto_jurnal) VALUES (:s, :t, :c, :f)')
+                ->execute(['s' => $sid, 't' => $hari_ini, 'c' => $catatan !== '' ? mb_substr($catatan, 0, 255) : null, 'f' => $foto]);
             $jurnal_id = (int) $pdo->lastInsertId();
         }
         $simpan = $pdo->prepare('INSERT INTO detail_jurnal_kebiasaan (jurnal_id, kebiasaan_id, selesai) VALUES (:j, :k, :s)
@@ -84,7 +97,7 @@ require __DIR__ . '/../includes/header.php';
         <p>Centang kebiasaan baik yang sudah kamu lakukan hari ini. Setiap kebiasaan yang disetujui guru bernilai 1 poin!</p>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="habit-grid mt">
             <?php foreach ($daftar_kebiasaan as $k): ?>
@@ -97,6 +110,12 @@ require __DIR__ . '/../includes/header.php';
         </div>
         <div class="form-grup"><label for="catatan">Catatan (opsional)</label>
             <input type="text" id="catatan" name="catatan" maxlength="255" value="<?= e($jurnal['catatan_siswa'] ?? '') ?>" <?= $terkunci ? 'disabled' : '' ?> placeholder="Ceritakan harimu..."></div>
+        <div class="form-grup"><label for="foto_jurnal">Foto Bukti (opsional, maks 1 MB)</label>
+            <input type="file" id="foto_jurnal" name="foto_jurnal" accept="image/jpeg,image/png,image/webp,image/gif" <?= $terkunci ? 'disabled' : '' ?>>
+            <small>Unggah foto kamu mengerjakan kebiasaan (misal menyusun kasur, beresin istirahat) supaya guru lebih mudah memeriksa.</small></div>
+        <?php if (!empty($jurnal['foto_jurnal'])): ?>
+            <p class="mt"><a href="<?= e(url('uploads/jurnal/' . $jurnal['foto_jurnal'])) ?>" target="_blank"><img class="soal-gambar" src="<?= e(url('uploads/jurnal/' . $jurnal['foto_jurnal'])) ?>" alt="Foto bukti jurnal" style="max-height:140px"></a></p>
+        <?php endif; ?>
         <?php if (!$terkunci): ?>
             <button type="submit" class="btn btn-success"><?= $jurnal ? '<i class="bi bi-floppy-fill"></i> Perbarui Checklist' : '<i class="bi bi-send-fill"></i> Kirim Checklist' ?></button>
         <?php else: ?>

@@ -1,0 +1,5 @@
+# Folder uploads: cegah eksekusi script dan directory listing
+<FilesMatch "\.(php|phtml|phar|php[0-9]|cgi|pl|exe)$">
+    Require all denied
+</FilesMatch>
+Options -Indexes

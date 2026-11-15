@@ -10,7 +10,7 @@ USE kkp_sd;
 SET NAMES utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS poin, badge, verifikasi_kebiasaan, detail_jurnal_kebiasaan, jurnal_kebiasaan, kebiasaan,
+DROP TABLE IF EXISTS poin, badge, verifikasi_kebiasaan, detail_jurnal_kebiasaan, jurnal_kebiasaan, kebiasaan, guru_kelas,
     jawaban_siswa, hasil_ujian, ujian_soal, ujian, opsi_jawaban, bank_soal,
     absensi_detail, absensi, siswa, orang_tua, kelas, mata_pelajaran, guru, users, roles;
 SET FOREIGN_KEY_CHECKS = 1;
@@ -41,6 +41,14 @@ CREATE TABLE guru (
     nama    VARCHAR(100) NOT NULL,
     email   VARCHAR(100) NULL,
     CONSTRAINT fk_guru_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE guru_kelas (
+    guru_id  INT UNSIGNED NOT NULL,
+    kelas_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (guru_id, kelas_id),
+    CONSTRAINT fk_gk_guru  FOREIGN KEY (guru_id)  REFERENCES guru(id) ON DELETE CASCADE,
+    CONSTRAINT fk_gk_kelas FOREIGN KEY (kelas_id) REFERENCES kelas(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE orang_tua (
@@ -196,6 +204,7 @@ CREATE TABLE jurnal_kebiasaan (
     siswa_id      INT UNSIGNED NOT NULL,
     tanggal       DATE NOT NULL,
     catatan_siswa VARCHAR(255) NULL,
+    foto_jurnal   VARCHAR(80) NULL,
     status        ENUM('menunggu','disetujui','ditolak') NOT NULL DEFAULT 'menunggu',
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_jurnal_siswa_tanggal (siswa_id, tanggal),
@@ -314,6 +323,11 @@ INSERT INTO kelas (id, nama_kelas, tingkat, wali_kelas_id) VALUES
   (1, '4A', 4, 2),
   (2, '5A', 5, 3),
   (3, '6A', 6, 4);
+
+INSERT INTO guru_kelas (guru_id, kelas_id) VALUES
+  (2, 1),
+  (3, 2),
+  (4, 3);
 
 INSERT INTO siswa (id, user_id, nisn, nama, jenis_kelamin, tanggal_lahir, alamat, kelas_id, orang_tua_id, status) VALUES
   (1, 5, '0012345678', 'Ahmad Fauzi', 'L', '2016-01-01', 'Jl. Melati No. 11, Kota Contoh', 1, 1, 'aktif'),

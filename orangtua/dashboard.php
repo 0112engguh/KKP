@@ -37,7 +37,7 @@ echo html_pilih_anak($semua_anak, $anak);
     <div class="stat hijau"><div class="stat-label">Kehadiran</div><div class="stat-nilai"><?= angka($absen['persen']) ?>%</div><div class="stat-catatan"><?= e($sem['label']) ?></div></div>
     <div class="stat"><div class="stat-label">Rata-rata Nilai TKA</div><div class="stat-nilai"><?= $riwayat ? angka(rata_rata_nilai($riwayat)) : '-' ?></div><div class="stat-catatan"><?= count($riwayat) ?> ujian</div></div>
     <div class="stat hijau"><div class="stat-label">Progress Kebiasaan</div><div class="stat-nilai"><?= angka($progress['progress']) ?>%</div><div class="stat-catatan">semester ini</div></div>
-    <div class="stat kuning"><div class="stat-label">Total Poin</div><div class="stat-nilai"><i class="bi bi-star-fill"></i> <?= $poin ?></div><div class="stat-catatan"><?= $diraih ? ikon_badge(end($diraih)['ikon']) . ' ' . e(end($diraih)['nama_badge']) : 'Belum ada badge' ?></div></div>
+    <div class="stat kuning"><div class="stat-label">Total Poin</div><div class="stat-nilai"><i class="bi bi-star-fill"></i> <?= (int) $poin ?></div><div class="stat-catatan"><?= $diraih ? ikon_badge(end($diraih)['ikon']) . ' ' . e(end($diraih)['nama_badge']) : 'Belum ada badge' ?></div></div>
 </div>
 
 <div class="grid-2">

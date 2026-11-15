@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
-$kelas_semua = semua_kelas();
-if (!$kelas_semua) redirect(url('guru/kelas.php'));
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 $kelas_id = (int) ($_GET['kelas_id'] ?? $kelas_semua[0]['id']);
 $nama_kelas = '';
 foreach ($kelas_semua as $k) if ((int) $k['id'] === $kelas_id) $nama_kelas = $k['nama_kelas'];
@@ -50,8 +50,8 @@ $qs = http_build_query($_GET + ['kelas_id' => $kelas_id]);
             <tbody>
             <?php foreach ($rekap as $i => $r): ?>
                 <tr><td><?= $i + 1 ?></td><td><?= e($r['nisn']) ?></td><td><?= e($r['nama']) ?></td>
-                    <td class="angka"><?= $r['hadir'] ?></td><td class="angka"><?= $r['izin'] ?></td><td class="angka"><?= $r['sakit'] ?></td><td class="angka"><?= $r['alpa'] ?></td>
-                    <td class="angka"><?= $r['total'] ?></td><td class="angka"><?= angka($r['persen']) ?>%</td></tr>
+                    <td class="angka"><?= (int) $r['hadir'] ?></td><td class="angka"><?= (int) $r['izin'] ?></td><td class="angka"><?= (int) $r['sakit'] ?></td><td class="angka"><?= (int) $r['alpa'] ?></td>
+                    <td class="angka"><?= (int) $r['total'] ?></td><td class="angka"><?= angka($r['persen']) ?>%</td></tr>
             <?php endforeach; ?>
             <?php if (!$rekap): ?><tr><td colspan="9" class="kosong">Tidak ada data.</td></tr><?php endif; ?>
             </tbody>

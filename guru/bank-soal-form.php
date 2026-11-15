@@ -23,21 +23,11 @@ if ($id > 0) {
     foreach ($st->fetchAll() as $o) $opsi[$o['label']] = $o['teks'];
 }
 
-// Validasi & simpan gambar upload. Mengembalikan nama file baru, null (tidak ada upload), atau melempar pesan galat.
+// Validasi & simpan gambar upload dengan simpan_gambar() dari includes/fungsi.php.
 function simpan_gambar_soal(array $berkas): ?string
 {
     if ($berkas['error'] === UPLOAD_ERR_NO_FILE) return null;
-    if ($berkas['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Upload gambar gagal. Coba lagi.');
-    if ($berkas['size'] > UPLOAD_MAKS_BYTE) throw new RuntimeException('Ukuran gambar maksimal 1 MB.');
-
-    $info = @getimagesize($berkas['tmp_name']);
-    $ekstensi = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
-    if (!$info || !isset($ekstensi[$info['mime']])) throw new RuntimeException('Gambar harus berformat JPG, PNG, WEBP, atau GIF.');
-
-    if (!is_dir(UPLOAD_SOAL_DIR)) @mkdir(UPLOAD_SOAL_DIR, 0775, true);
-    $nama = bin2hex(random_bytes(8)) . '.' . $ekstensi[$info['mime']];
-    if (!move_uploaded_file($berkas['tmp_name'], UPLOAD_SOAL_DIR . $nama)) throw new RuntimeException('Gambar gagal disimpan di server.');
-    return $nama;
+    return simpan_gambar(UPLOAD_SOAL_DIR, $berkas);
 }
 
 $galat = [];
@@ -130,7 +120,7 @@ require __DIR__ . '/../includes/header.php';
         <div class="form-grup"><label for="tingkat">Tingkat Kesulitan</label>
             <select id="tingkat" name="tingkat">
                 <?php foreach (['mudah', 'sedang', 'sulit'] as $t): ?>
-                    <option value="<?= $t ?>" <?= $data['tingkat'] === $t ? 'selected' : '' ?>><?= ucfirst($t) ?></option>
+                    <option value="<?= e($t) ?>" <?= $data['tingkat'] === $t ? 'selected' : '' ?>><?= e(ucfirst($t)) ?></option>
                 <?php endforeach; ?>
             </select></div>
     </div>
@@ -147,14 +137,14 @@ require __DIR__ . '/../includes/header.php';
 
     <h2>Pilihan Jawaban</h2>
     <?php foreach ($opsi as $label => $teks): ?>
-        <div class="form-grup"><label for="opsi<?= $label ?>">Opsi <?= $label ?> *</label>
-            <input type="text" id="opsi<?= $label ?>" name="opsi[<?= $label ?>]" value="<?= e($teks) ?>" maxlength="500" required></div>
+        <div class="form-grup"><label for="opsi<?= e($label) ?>">Opsi <?= e($label) ?> *</label>
+            <input type="text" id="opsi<?= e($label) ?>" name="opsi[<?= e($label) ?>]" value="<?= e($teks) ?>" maxlength="500" required></div>
     <?php endforeach; ?>
 
     <div class="form-grup"><label for="kunci_jawaban">Kunci Jawaban *</label>
         <select id="kunci_jawaban" name="kunci_jawaban">
             <?php foreach (array_keys($opsi) as $label): ?>
-                <option value="<?= $label ?>" <?= $data['kunci_jawaban'] === $label ? 'selected' : '' ?>><?= $label ?></option>
+                <option value="<?= e($label) ?>" <?= $data['kunci_jawaban'] === $label ? 'selected' : '' ?>><?= e($label) ?></option>
             <?php endforeach; ?>
         </select></div>
     <div class="form-grup"><label for="pembahasan">Pembahasan</label>

@@ -11,6 +11,8 @@ $data = ['nama_ujian' => '', 'mapel_id' => 0, 'kelas_id' => 0, 'durasi_menit' =>
          'waktu_mulai' => date('Y-m-d H:i:s'), 'waktu_selesai' => date('Y-m-d H:i:s', strtotime('+7 days')), 'status' => 'draft'];
 $soal_dipilih = [];
 $sudah_ada_hasil = false;
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 
 if ($id > 0) {
     $st = db()->prepare('SELECT * FROM ujian WHERE id = :id');
@@ -18,6 +20,10 @@ if ($id > 0) {
     $data = $st->fetch();
     if (!$data) {
         flash('danger', 'Data tidak ditemukan.');
+        redirect(url('guru/ujian.php'));
+    }
+    if (!punya_kelas($kelas_semua, (int) $data['kelas_id'])) {
+        flash('danger', 'Ujian tidak termasuk kelas yang ditugaskan kepada Anda.');
         redirect(url('guru/ujian.php'));
     }
     $st = db()->prepare('SELECT soal_id FROM ujian_soal WHERE ujian_id = :u');
@@ -50,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($data['nama_ujian'] === '') $galat[] = 'Nama ujian wajib diisi.';
     if (!skalar('SELECT COUNT(*) FROM mata_pelajaran WHERE id = :m', ['m' => $data['mapel_id']])) $galat[] = 'Mata pelajaran wajib dipilih.';
     if (!skalar('SELECT COUNT(*) FROM kelas WHERE id = :k', ['k' => $data['kelas_id']])) $galat[] = 'Kelas wajib dipilih.';
+    if ($data['kelas_id'] > 0 && !punya_kelas($kelas_semua, $data['kelas_id'])) $galat[] = 'Kelas tidak termasuk penugasan Anda.';
     if ($data['durasi_menit'] < 1 || $data['durasi_menit'] > 300) $galat[] = 'Durasi harus antara 1 sampai 300 menit.';
     if (!$mulai || !$selesai) $galat[] = 'Jadwal mulai dan selesai wajib diisi.';
     elseif ($selesai <= $mulai) $galat[] = 'Jadwal selesai harus setelah jadwal mulai.';
@@ -117,7 +124,7 @@ require __DIR__ . '/../includes/header.php';
         <div class="form-grup"><label for="kelas_id">Kelas *</label>
             <select id="kelas_id" name="kelas_id" required>
                 <option value="">-- Pilih --</option>
-                <?php foreach (semua_kelas() as $k): ?>
+                <?php foreach ($kelas_semua as $k): ?>
                     <option value="<?= (int) $k['id'] ?>" <?= (int) $data['kelas_id'] === (int) $k['id'] ? 'selected' : '' ?>><?= e($k['nama_kelas']) ?></option>
                 <?php endforeach; ?>
             </select></div>

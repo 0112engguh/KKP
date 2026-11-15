@@ -8,12 +8,18 @@ require_once __DIR__ . '/../includes/fungsi.php';
 $pengguna_login = wajib_role(['admin', 'guru']);
 
 $id = (int) ($_GET['id'] ?? 0);
-$st = db()->prepare('SELECT j.*, s.nama, s.nisn, s.id AS sid, k.nama_kelas FROM jurnal_kebiasaan j
+$st = db()->prepare('SELECT j.*, s.nama, s.nisn, s.id AS sid, s.kelas_id, k.nama_kelas FROM jurnal_kebiasaan j
                      JOIN siswa s ON s.id = j.siswa_id JOIN kelas k ON k.id = s.kelas_id WHERE j.id = :id');
 $st->execute(['id' => $id]);
 $jurnal = $st->fetch();
 if (!$jurnal) {
     flash('danger', 'Data tidak ditemukan.');
+    redirect(url('guru/jurnal.php'));
+}
+
+$kelas_semua = kelas_guru();
+if (!$kelas_semua || !punya_kelas($kelas_semua, (int) $jurnal['kelas_id'])) {
+    flash('danger', 'Jurnal tidak termasuk kelas yang ditugaskan kepada Anda.');
     redirect(url('guru/jurnal.php'));
 }
 
@@ -82,8 +88,11 @@ require __DIR__ . '/../includes/header.php';
                 <span><strong><?= e($d['nama_kebiasaan']) ?></strong> <small><?= e($d['deskripsi']) ?></small></span>
             </div>
         <?php endforeach; ?>
-        <p class="mt"><strong><?= $jumlah_selesai ?> dari 7</strong> kebiasaan diceklis (setara <?= $jumlah_selesai ?> poin).</p>
+        <p class="mt"><strong><?= (int) $jumlah_selesai ?> dari 7</strong> kebiasaan diceklis (setara <?= (int) $jumlah_selesai ?> poin).</p>
         <?php if ($jurnal['catatan_siswa']): ?><p><em>Catatan siswa: &ldquo;<?= e($jurnal['catatan_siswa']) ?>&rdquo;</em></p><?php endif; ?>
+        <?php if ($jurnal['foto_jurnal']): ?>
+            <p class="mt"><strong>Foto bukti:</strong> <a href="<?= e(url('uploads/jurnal/' . $jurnal['foto_jurnal'])) ?>" target="_blank"><img class="soal-gambar" src="<?= e(url('uploads/jurnal/' . $jurnal['foto_jurnal'])) ?>" alt="Foto bukti jurnal" style="max-height:160px"></a></p>
+        <?php endif; ?>
     </section>
 
     <section class="card">
@@ -92,7 +101,7 @@ require __DIR__ . '/../includes/header.php';
             <?= csrf_field() ?>
             <div class="form-grup"><label>Keputusan</label>
                 <?php foreach (['disetujui' => 'Setujui (poin diberikan)', 'ditolak' => 'Tolak (perlu perbaikan)', 'menunggu' => 'Kembalikan ke Menunggu'] as $k => $v): ?>
-                    <label class="cek-baris"><input type="radio" name="status" value="<?= $k ?>" <?= $jurnal['status'] === $k || ($jurnal['status'] === 'menunggu' && $k === 'disetujui') ? 'checked' : '' ?>> <?= $v ?></label>
+                    <label class="cek-baris"><input type="radio" name="status" value="<?= e($k) ?>" <?= $jurnal['status'] === $k || ($jurnal['status'] === 'menunggu' && $k === 'disetujui') ? 'checked' : '' ?>> <?= e($v) ?></label>
                 <?php endforeach; ?>
             </div>
             <div class="form-grup"><label for="catatan">Catatan / Motivasi</label>

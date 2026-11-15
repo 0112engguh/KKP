@@ -176,12 +176,18 @@ table.tabel { width: 100%; border-collapse: collapse; font-size: .93rem; }
 .login-card h1 { font-size: 1.4rem; margin-top: .5rem; }
 .login-sub { color: var(--abu-teks); font-size: .9rem; margin: .25rem 0 1.25rem; }
 .login-card form { text-align: left; }
-.pilih-peran { display: flex; gap: .4rem; margin-bottom: 1.1rem; }
-.chip { flex: 1; }
-.chip input { position: absolute; opacity: 0; pointer-events: none; }
-.chip span { display: block; text-align: center; padding: .55rem .25rem; border: 2px solid var(--abu-garis); border-radius: 10px; font-weight: 600; font-size: .88rem; cursor: pointer; }
-.chip input:checked + span { border-color: var(--primary); background: var(--primary-muda); color: var(--primary-gelap); }
-.chip input:focus-visible + span { outline: 3px solid var(--primary-muda); }
+.login-pindah { margin-top: 1.25rem; font-size: .85rem; display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+.login-pindah a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.login-pindah a:hover { text-decoration: underline; }
+
+/* Login dengan peran tetap: siswa (hijau), guru/admin (biru) */
+.login-role { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); margin: .25rem 0 0; }
+.halaman-login-siswa { background: linear-gradient(160deg, #dcfce7 0%, #e0f2fe 100%); }
+.halaman-login-siswa .login-card { box-shadow: 0 10px 40px rgba(22, 163, 74, .18); }
+.halaman-login-siswa .login-role { color: var(--success); }
+.halaman-login-siswa .btn-primary { background: var(--success); border-color: var(--success); }
+.halaman-login-guru { background: linear-gradient(160deg, #dbeafe 0%, #e0e7ff 100%); }
+.halaman-login-guru .login-card { box-shadow: 0 10px 40px rgba(37, 99, 235, .25); }
 
 /* ---------- Absensi ---------- */
 .pilih-absen { display: flex; gap: .35rem; }

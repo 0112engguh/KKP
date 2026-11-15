@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
-$kelas_semua = semua_kelas();
-if (!$kelas_semua) redirect(url('guru/kelas.php'));
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 $kelas_id = (int) ($_GET['kelas_id'] ?? $kelas_semua[0]['id']);
 $nama_kelas = $kelas_semua[0]['nama_kelas'];
 $ditemukan = false;
@@ -67,9 +67,9 @@ require __DIR__ . '/../includes/header.php';
             <tbody>
             <?php foreach ($baris as $i => $b): ?>
                 <tr><td><?= $i + 1 ?></td><td><strong><?= e($b['nama']) ?></strong></td>
-                    <td class="angka"><?= $b['checklist'] ?></td><td class="angka"><?= $b['poin'] ?></td>
+                    <td class="angka"><?= (int) $b['checklist'] ?></td><td class="angka"><?= (int) $b['poin'] ?></td>
                     <td class="angka"><div class="progress"><span style="width:<?= (float) $b['progress'] ?>%"></span></div><small><?= angka($b['progress']) ?>%</small></td>
-                    <td class="angka"><?= $b['disetujui_j'] ?></td><td class="angka"><?= $b['menunggu_j'] ?></td><td class="angka"><?= $b['ditolak_j'] ?></td></tr>
+                    <td class="angka"><?= (int) $b['disetujui_j'] ?></td><td class="angka"><?= (int) $b['menunggu_j'] ?></td><td class="angka"><?= (int) $b['ditolak_j'] ?></td></tr>
             <?php endforeach; ?>
             <?php if (!$baris): ?><tr><td colspan="8" class="kosong">Tidak ada data.</td></tr><?php endif; ?>
             </tbody>

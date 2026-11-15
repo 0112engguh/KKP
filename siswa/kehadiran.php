@@ -27,9 +27,9 @@ require __DIR__ . '/../includes/header.php';
         <h2>Kehadiran <?= e($periode['label']) ?></h2>
         <?php if ($rekap['total'] > 0): ?>
             <div class="grafik" data-grafik="donat" data-labels='["Hadir","Izin","Sakit","Alpa"]'
-                 data-values='[<?= $rekap['hadir'] ?>,<?= $rekap['izin'] ?>,<?= $rekap['sakit'] ?>,<?= $rekap['alpa'] ?>]'
+                 data-values='[<?= (int) $rekap['hadir'] ?>,<?= (int) $rekap['izin'] ?>,<?= (int) $rekap['sakit'] ?>,<?= (int) $rekap['alpa'] ?>]'
                  data-warna='["#16a34a","#2563eb","#eab308","#dc2626"]'></div>
-            <p class="teks-tengah">Persentase hadir: <strong><?= angka($rekap['persen']) ?>%</strong> (<?= $rekap['hadir'] ?> dari <?= $rekap['total'] ?> hari)</p>
+            <p class="teks-tengah">Persentase hadir: <strong><?= angka($rekap['persen']) ?>%</strong> (<?= (int) $rekap['hadir'] ?> dari <?= (int) $rekap['total'] ?> hari)</p>
         <?php else: ?>
             <div class="kosong">Belum ada data absensi pada periode ini.</div>
         <?php endif; ?>

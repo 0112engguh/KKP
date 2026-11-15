@@ -69,6 +69,34 @@ function semua_kelas(): array
     return db()->query('SELECT id, nama_kelas, tingkat FROM kelas ORDER BY tingkat, nama_kelas')->fetchAll();
 }
 
+/* ---------- Penugasan kelas guru ---------- */
+
+// Kelas yang boleh dikelola pengguna saat ini: admin bebas, guru hanya kelas yang
+// ditugaskan admin lewat menu Data Guru. Guru tanpa penugasan tidak dapat kelas.
+function kelas_guru(): array
+{
+    $u = user();
+    if ($u && $u['role'] === 'admin') return semua_kelas();
+    if (!$u || $u['role'] !== 'guru') return [];
+    $st = db()->prepare('SELECT k.id, k.nama_kelas, k.tingkat FROM guru_kelas gk JOIN kelas k ON k.id = gk.kelas_id
+                         WHERE gk.guru_id = :g ORDER BY k.tingkat, k.nama_kelas');
+    $st->execute(['g' => (int) $u['profil_id']]);
+    return $st->fetchAll();
+}
+
+function punya_kelas(array $izin, int $kelas_id): bool
+{
+    return in_array($kelas_id, array_map('intval', array_column($izin, 'id')), true);
+}
+
+// Berhenti: kelas kosong / belum ditugaskan. Pengguna diarahkan sesuai role.
+function akhir_kelas(): void
+{
+    $admin = user() && user()['role'] === 'admin';
+    flash('warning', $admin ? 'Belum ada kelas. Tambahkan dulu di menu Kelas.' : 'Anda belum ditugaskan kelas. Hubungi admin sekolah.');
+    redirect(url($admin ? 'guru/kelas.php' : 'guru/dashboard.php'));
+}
+
 function semua_mapel(): array
 {
     return db()->query('SELECT id, nama_mapel FROM mata_pelajaran ORDER BY nama_mapel')->fetchAll();
@@ -461,6 +489,23 @@ function simpan_jawaban(array $hasil, int $soal_id, ?string $jawaban, int $ragu)
 function ikon_kebiasaan(int $id): string
 {
     return ['<i class="bi bi-sunrise-fill"></i>', '<i class="bi bi-heart-fill"></i>', '<i class="bi bi-person-running"></i>', '<i class="bi bi-egg-fried"></i>', '<i class="bi bi-book-fill"></i>', '<i class="bi bi-people-fill"></i>', '<i class="bi bi-moon-fill"></i>'][($id - 1) % 7];
+}
+
+/* ---------- Upload gambar ---------- */
+
+// Validasi & simpan gambar unggahan ke folder tujuan, lalu kembalikan nama file acak.
+// Melempar RuntimeException bila bukan gambar (JPG/PNG/WEBP/GIF) atau melebihi batas ukuran.
+function simpan_gambar(string $dir, array $berkas): string
+{
+    if ($berkas['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Upload gambar gagal. Coba lagi.');
+    if ($berkas['size'] > UPLOAD_MAKS_BYTE) throw new RuntimeException('Ukuran gambar maksimal 1 MB.');
+    $info = @getimagesize($berkas['tmp_name']);
+    $ekstensi = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    if (!$info || !isset($ekstensi[$info['mime']])) throw new RuntimeException('Gambar harus berformat JPG, PNG, WEBP, atau GIF.');
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    $nama = bin2hex(random_bytes(8)) . '.' . $ekstensi[$info['mime']];
+    if (!move_uploaded_file($berkas['tmp_name'], $dir . $nama)) throw new RuntimeException('Gambar gagal disimpan di server.');
+    return $nama;
 }
 
 /* ---------- Orang tua ---------- */

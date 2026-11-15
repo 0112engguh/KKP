@@ -17,7 +17,7 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <section class="card teks-tengah">
     <div class="stat-label">Total Poinmu</div>
-    <div class="nilai-besar"><i class="bi bi-star-fill"></i> <?= $poin ?></div>
+    <div class="nilai-besar"><i class="bi bi-star-fill"></i> <?= (int) $poin ?></div>
     <?php if ($berikut): ?>
         <p>Tinggal <strong><?= (int) $berikut['minimal_poin'] - $poin ?> poin</strong> lagi untuk badge
             <strong><?= ikon_badge($berikut['ikon']) ?> <?= e($berikut['nama_badge']) ?></strong></p>
@@ -27,7 +27,7 @@ require __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 </section>
 
-<h2>Koleksi Badge (<?= $badge['jumlah_diraih'] ?>/<?= count($badge['semua']) ?>)</h2>
+<h2>Koleksi Badge (<?= (int) $badge['jumlah_diraih'] ?>/<?= count($badge['semua']) ?>)</h2>
 <div class="badge-grid">
     <?php foreach ($badge['semua'] as $b): ?>
         <div class="badge-item <?= $b['diraih'] ? '' : 'terkunci' ?>">

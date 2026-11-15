@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
-$kelas_semua = semua_kelas();
-if (!$kelas_semua) redirect(url('guru/kelas.php'));
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
 $kelas_id = (int) ($_GET['kelas_id'] ?? $kelas_semua[0]['id']);
 $nama_kelas = $kelas_semua[0]['nama_kelas'];
 $ditemukan = false;
@@ -74,7 +74,7 @@ require __DIR__ . '/../includes/header.php';
                 <tr><td><?= $i + 1 ?></td><td><strong><?= e($b['nama']) ?></strong></td>
                     <td class="angka"><?= angka($b['hadir']) ?>%</td>
                     <td class="angka"><?= $b['nilai'] !== null ? angka($b['nilai']) . ' <small>(' . $b['ujian'] . ' ujian)</small>' : '-' ?></td>
-                    <td class="angka"><?= $b['poin'] ?></td><td class="angka"><?= angka($b['progress']) ?>%</td><td><?= e($b['badge']) ?></td></tr>
+                    <td class="angka"><?= (int) $b['poin'] ?></td><td class="angka"><?= angka($b['progress']) ?>%</td><td><?= e($b['badge']) ?></td></tr>
             <?php endforeach; ?>
             <?php if (!$baris): ?><tr><td colspan="7" class="kosong">Tidak ada data.</td></tr><?php endif; ?>
             </tbody>

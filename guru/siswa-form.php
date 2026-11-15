@@ -11,6 +11,10 @@ $id = (int) ($_GET['id'] ?? 0);
 $data = ['nisn' => '', 'nama' => '', 'jenis_kelamin' => 'L', 'tanggal_lahir' => '', 'alamat' => '', 'kelas_id' => 0,
          'orang_tua_id' => 0, 'status' => 'aktif', 'user_id' => 0];
 
+$galat = [];
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
 if ($id > 0) {
     $st = db()->prepare('SELECT * FROM siswa WHERE id = :id');
     $st->execute(['id' => $id]);
@@ -19,9 +23,12 @@ if ($id > 0) {
         flash('danger', 'Data tidak ditemukan.');
         redirect(url('guru/siswa.php'));
     }
+    if (!punya_kelas($kelas_semua, (int) $data['kelas_id'])) {
+        flash('danger', 'Siswa tidak termasuk kelas yang ditugaskan kepada Anda.');
+        redirect(url('guru/siswa.php'));
+    }
 }
 
-$galat = [];
 $nama_ortu_baru = $_POST['nama_ortu'] ?? '';
 $hp_ortu = $_POST['no_hp'] ?? '';
 
@@ -43,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($data['nama'] === '') $galat[] = 'Nama siswa wajib diisi.';
     if ($data['tanggal_lahir'] !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['tanggal_lahir'])) $galat[] = 'Tanggal lahir tidak valid.';
     if ($data['kelas_id'] <= 0 || !skalar('SELECT COUNT(*) FROM kelas WHERE id = :k', ['k' => $data['kelas_id']])) $galat[] = 'Kelas wajib dipilih.';
+    if ($data['kelas_id'] > 0 && !punya_kelas($kelas_semua, $data['kelas_id'])) $galat[] = 'Kelas tidak termasuk penugasan Anda.';
     if ($password !== '' && strlen($password) < 6) $galat[] = 'Password minimal 6 karakter.';
 
     // NISN harus unik
@@ -137,7 +145,7 @@ require __DIR__ . '/../includes/header.php';
         <div class="form-grup"><label for="kelas_id">Kelas *</label>
             <select id="kelas_id" name="kelas_id" required>
                 <option value="">-- Pilih kelas --</option>
-                <?php foreach (semua_kelas() as $k): ?>
+                <?php foreach ($kelas_semua as $k): ?>
                     <option value="<?= (int) $k['id'] ?>" <?= (int) $data['kelas_id'] === (int) $k['id'] ? 'selected' : '' ?>><?= e($k['nama_kelas']) ?></option>
                 <?php endforeach; ?>
             </select></div>
