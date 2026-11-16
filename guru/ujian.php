@@ -40,12 +40,14 @@ if (user()['role'] !== 'admin') {
     $where_kelas = ' WHERE u.kelas_id IN (' . implode(',', $ids) . ')';
 }
 
-$daftar = db()->query("SELECT u.*, m.nama_mapel, k.nama_kelas,
+[$daftar, $halaman, $hal_akhir, $total] = paginasi(
+    "SELECT u.*, m.nama_mapel, k.nama_kelas,
         (SELECT COUNT(*) FROM ujian_soal us WHERE us.ujian_id = u.id) AS jml_soal,
         (SELECT COUNT(*) FROM hasil_ujian h WHERE h.ujian_id = u.id) AS jml_peserta
     FROM ujian u JOIN mata_pelajaran m ON m.id = u.mapel_id JOIN kelas k ON k.id = u.kelas_id
     $where_kelas
-    ORDER BY u.waktu_mulai DESC")->fetchAll();
+    ORDER BY u.waktu_mulai DESC",
+    'SELECT COUNT(*) FROM ujian u' . ($where_kelas ?: ''), []);
 $sekarang = date('Y-m-d H:i:s');
 
 $judul = 'Daftar Ujian TKA';
@@ -88,5 +90,6 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

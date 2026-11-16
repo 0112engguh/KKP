@@ -17,7 +17,10 @@ if (!$anak) {
     exit;
 }
 $rekap = rekap_absensi_siswa((int) $anak['id'], $periode['dari'], $periode['sampai']);
-$detail = detail_absensi_siswa((int) $anak['id'], $periode['dari'], $periode['sampai']);
+$detail_semua = detail_absensi_siswa((int) $anak['id'], $periode['dari'], $periode['sampai']);
+[$detail, $halaman, $hal_akhir] = paginasi_array($detail_semua);
+$get_periode = ['anak' => $anak['id'], 'jenis' => $periode['jenis'], 'tanggal' => $periode['tanggal'],
+                'bulan' => $periode['bulan'], 'semester' => $periode['semester'], 'tahun' => $periode['tahun']];
 echo html_pilih_anak($semua_anak, $anak);
 ?>
 <section class="card">
@@ -54,6 +57,7 @@ echo html_pilih_anak($semua_anak, $anak);
                 </tbody>
             </table>
         </div>
+        <?= paginasi_tautan($halaman, $hal_akhir, $get_periode) ?>
     </section>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

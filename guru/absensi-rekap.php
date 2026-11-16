@@ -15,6 +15,8 @@ if (!punya_kelas($kelas_semua, $kelas_id)) {
 }
 $periode = ambil_periode($_GET);
 $rekap = rekap_absensi_kelas($kelas_id, $periode['dari'], $periode['sampai']);
+// Tabel rekap dipaginasi; grafik tetap memakai seluruh siswa
+[$rekap_tampil, $halaman, $hal_akhir] = paginasi_array($rekap);
 
 $jumlah = ['hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0, 'total' => 0];
 foreach ($rekap as $r) foreach ($jumlah as $k => $_) $jumlah[$k] += $r[$k];
@@ -74,9 +76,9 @@ $qs_dasar = ['kelas_id' => $kelas_id, 'jenis' => $periode['jenis'], 'tanggal' =>
         <table class="tabel">
             <thead><tr><th>No</th><th>NISN</th><th>Nama</th><th class="angka">H</th><th class="angka">I</th><th class="angka">S</th><th class="angka">A</th><th class="angka">Total Hari</th><th class="angka">Persentase</th><th>Detail</th></tr></thead>
             <tbody>
-            <?php foreach ($rekap as $i => $r): ?>
+            <?php foreach ($rekap_tampil as $i => $r): ?>
                 <tr>
-                    <td><?= $i + 1 ?></td><td><?= e($r['nisn']) ?></td><td><strong><?= e($r['nama']) ?></strong></td>
+                    <td><?= ($halaman - 1) * PER_HALAMAN + $i + 1 ?></td><td><?= e($r['nisn']) ?></td><td><strong><?= e($r['nama']) ?></strong></td>
                     <td class="angka"><?= (int) $r['hadir'] ?></td><td class="angka"><?= (int) $r['izin'] ?></td><td class="angka"><?= (int) $r['sakit'] ?></td><td class="angka"><?= (int) $r['alpa'] ?></td>
                     <td class="angka"><?= (int) $r['total'] ?></td>
                     <td class="angka"><?= $r['total'] ? pill(angka($r['persen']) . '%', $r['persen'] >= 90 ? 'hijau' : ($r['persen'] >= 75 ? 'kuning' : 'merah')) : '-' ?></td>
@@ -87,6 +89,7 @@ $qs_dasar = ['kelas_id' => $kelas_id, 'jenis' => $periode['jenis'], 'tanggal' =>
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir, $qs_dasar) ?>
 </section>
 
 <?php if ($detail): ?>

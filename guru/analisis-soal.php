@@ -53,6 +53,8 @@ if ($ujian) {
         $analisis[] = $s + ['sebaran' => $d, 'benar' => $benar, 'persen' => $persen_benar,
             'kesukaran' => $persen_benar >= 70 ? 'Mudah' : ($persen_benar >= 40 ? 'Sedang' : 'Sulit')];
     }
+    // Tabel dipaginasi; grafik tetap memakai seluruh data
+    [$analisis_tampil, $halaman, $hal_akhir] = paginasi_array($analisis);
 }
 
 $judul = 'Analisis Butir Soal';
@@ -84,7 +86,7 @@ require __DIR__ . '/../includes/header.php';
         <table class="tabel">
             <thead><tr><th>No</th><th>Pertanyaan</th><th class="angka">Kunci</th><th class="angka">A</th><th class="angka">B</th><th class="angka">C</th><th class="angka">D</th><th class="angka">Kosong</th><th class="angka">% Benar</th><th>Kesukaran</th></tr></thead>
             <tbody>
-            <?php foreach ($analisis as $a): ?>
+            <?php foreach ($analisis_tampil as $a): ?>
                 <tr>
                     <td><?= (int) $a['urutan'] ?></td>
                     <td><?= e(mb_strimwidth($a['pertanyaan'], 0, 70, '...')) ?></td>
@@ -100,6 +102,7 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir, ['ujian_id' => $ujian_id]) ?>
 </section>
 <?php elseif ($ujian): ?>
     <div class="card kosong">Belum ada siswa yang menyelesaikan ujian ini.</div>

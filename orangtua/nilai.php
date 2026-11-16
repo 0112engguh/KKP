@@ -17,6 +17,8 @@ if (!$anak) {
 finalisasi_kadaluarsa(null, (int) $anak['id']);
 $riwayat = riwayat_nilai((int) $anak['id']);
 $urut = array_reverse($riwayat);
+// Grafik memakai data lengkap, tabel dipaginasi
+[$riwayat_tampil, $halaman, $hal_akhir] = paginasi_array($riwayat);
 echo html_pilih_anak($semua_anak, $anak);
 ?>
 <section class="card">
@@ -31,7 +33,7 @@ echo html_pilih_anak($semua_anak, $anak);
         <table class="tabel">
             <thead><tr><th>Tanggal</th><th>Ujian</th><th>Mapel</th><th class="angka">Benar</th><th class="angka">Salah</th><th class="angka">Nilai</th></tr></thead>
             <tbody>
-            <?php foreach ($riwayat as $r): ?>
+            <?php foreach ($riwayat_tampil as $r): ?>
                 <tr><td><?= e(tgl_indo($r['waktu_selesai'])) ?></td><td><strong><?= e($r['nama_ujian']) ?></strong></td><td><?= e($r['nama_mapel']) ?></td>
                     <td class="angka"><?= (int) $r['jumlah_benar'] ?></td><td class="angka"><?= (int) $r['jumlah_salah'] ?></td>
                     <td class="angka"><?= pill(angka($r['nilai']), warna_nilai((float) $r['nilai'])) ?></td></tr>
@@ -40,5 +42,6 @@ echo html_pilih_anak($semua_anak, $anak);
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

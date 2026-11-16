@@ -11,7 +11,7 @@ SET NAMES utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS poin, badge, verifikasi_kebiasaan, detail_jurnal_kebiasaan, jurnal_kebiasaan, kebiasaan, guru_kelas,
-    jawaban_siswa, hasil_ujian, ujian_soal, ujian, opsi_jawaban, bank_soal,
+    jawaban_siswa, hasil_ujian, kelompok_ujian_soal, kelompok_ujian, ujian_soal, ujian, opsi_jawaban, bank_soal,
     absensi_detail, absensi, siswa, orang_tua, kelas, mata_pelajaran, guru, users, roles;
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -161,6 +161,31 @@ CREATE TABLE ujian_soal (
     UNIQUE KEY uq_ujian_soal (ujian_id, soal_id),
     CONSTRAINT fk_us_ujian FOREIGN KEY (ujian_id) REFERENCES ujian(id)     ON DELETE CASCADE,
     CONSTRAINT fk_us_soal  FOREIGN KEY (soal_id)  REFERENCES bank_soal(id)
+) ENGINE=InnoDB;
+
+-- Bank Soal parent-child: Parent = kelompok ujian, Child = soal di dalam kelompok.
+-- Soal dapat dipakai ulang di beberapa kelompok tanpa duplikat (many-to-many).
+CREATE TABLE kelompok_ujian (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nama_ujian    VARCHAR(150) NOT NULL,
+    tahun_ajaran  VARCHAR(9) NOT NULL,          -- contoh: 2026/2027
+    semester      ENUM('ganjil','genap') NOT NULL,
+    kelas_id      INT UNSIGNED NOT NULL,
+    status        ENUM('draft','aktif') NOT NULL DEFAULT 'draft',
+    dibuat_pada   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_kelompok_tahun (tahun_ajaran),
+    CONSTRAINT fk_kelompok_kelas FOREIGN KEY (kelas_id) REFERENCES kelas(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE kelompok_ujian_soal (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    kelompok_id INT UNSIGNED NOT NULL,
+    soal_id     INT UNSIGNED NOT NULL,
+    urutan      SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    bobot       DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+    UNIQUE KEY uq_kelompok_soal (kelompok_id, soal_id),
+    CONSTRAINT fk_ks_kelompok FOREIGN KEY (kelompok_id) REFERENCES kelompok_ujian(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ks_soal     FOREIGN KEY (soal_id)     REFERENCES bank_soal(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE hasil_ujian (

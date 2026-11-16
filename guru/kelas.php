@@ -72,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $daftar = db()->query("SELECT k.id, k.nama_kelas, k.tingkat, g.nama AS wali,
         (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) AS jml_siswa
     FROM kelas k LEFT JOIN guru g ON g.id = k.wali_kelas_id ORDER BY k.tingkat, k.nama_kelas")->fetchAll();
+[$daftar, $halaman, $hal_akhir] = paginasi_array($daftar);
 $daftar_guru = db()->query('SELECT id, nama FROM guru ORDER BY nama')->fetchAll();
 
 $judul = 'Data Kelas';
@@ -107,6 +108,7 @@ require __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?= paginasi_tautan($halaman, $hal_akhir) ?>
     </section>
 
     <section class="card">

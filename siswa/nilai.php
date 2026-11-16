@@ -11,6 +11,8 @@ if (!$siswa) redirect(url('auth/logout.php'));
 finalisasi_kadaluarsa(null, (int) $siswa['id']);
 $riwayat = riwayat_nilai((int) $siswa['id']);
 $urut = array_reverse($riwayat);
+// Grafik memakai data lengkap, tabel dipaginasi
+[$riwayat_tampil, $halaman, $hal_akhir] = paginasi_array($riwayat);
 
 $judul = 'History Nilai TKA';
 require __DIR__ . '/../includes/header.php';
@@ -28,7 +30,7 @@ require __DIR__ . '/../includes/header.php';
         <table class="tabel">
             <thead><tr><th>Tanggal</th><th>Ujian</th><th>Mapel</th><th class="angka">Benar</th><th class="angka">Salah</th><th class="angka">Nilai</th><th>Pembahasan</th></tr></thead>
             <tbody>
-            <?php foreach ($riwayat as $r): ?>
+            <?php foreach ($riwayat_tampil as $r): ?>
                 <tr>
                     <td><?= e(tgl_indo($r['waktu_selesai'])) ?></td>
                     <td><strong><?= e($r['nama_ujian']) ?></strong></td>
@@ -42,5 +44,6 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

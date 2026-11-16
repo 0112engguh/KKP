@@ -10,7 +10,10 @@ if (!$siswa) redirect(url('auth/logout.php'));
 
 $periode = ambil_periode($_GET);
 $rekap = rekap_absensi_siswa((int) $siswa['id'], $periode['dari'], $periode['sampai']);
-$detail = detail_absensi_siswa((int) $siswa['id'], $periode['dari'], $periode['sampai']);
+$detail_semua = detail_absensi_siswa((int) $siswa['id'], $periode['dari'], $periode['sampai']);
+[$detail, $halaman, $hal_akhir] = paginasi_array($detail_semua);
+$get_periode = ['jenis' => $periode['jenis'], 'tanggal' => $periode['tanggal'], 'bulan' => $periode['bulan'],
+                'semester' => $periode['semester'], 'tahun' => $periode['tahun']];
 
 $judul = 'Rekap Kehadiran';
 require __DIR__ . '/../includes/header.php';
@@ -47,6 +50,7 @@ require __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?= paginasi_tautan($halaman, $hal_akhir, $get_periode) ?>
     </section>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

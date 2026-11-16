@@ -9,6 +9,7 @@ $siswa = siswa_login();
 if (!$siswa) redirect(url('auth/logout.php'));
 
 $daftar = ujian_untuk_siswa($siswa);
+[$daftar, $halaman, $hal_akhir] = paginasi_array($daftar);
 $label = [
     'belum_mulai' => ['Belum dimulai', 'biru'], 'tersedia' => ['Aktif', 'hijau'], 'berlangsung' => ['Sedang dikerjakan', 'kuning'],
     'selesai' => ['Sudah dikerjakan', 'abu'], 'berakhir' => ['Berakhir', 'merah'],
@@ -44,5 +45,6 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

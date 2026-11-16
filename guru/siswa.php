@@ -49,8 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'hapus')
 // ----- Daftar + pencarian -----
 $cari     = trim($_GET['q'] ?? '');
 $kelas_id = (int) ($_GET['kelas'] ?? 0);
-$halaman  = max(1, (int) ($_GET['hal'] ?? 1));
-$per_hal  = 20;
 
 $where = ' WHERE 1=1';
 $param = [];
@@ -70,18 +68,10 @@ if ($kelas_id > 0) {
     $where .= ' AND s.kelas_id IN (' . implode(',', $ids) . ')';
 }
 
-$total = (int) skalar('SELECT COUNT(*) FROM siswa s' . $where, $param);
-$jml_halaman = max(1, (int) ceil($total / $per_hal));
-$halaman = min($halaman, $jml_halaman);
-
-$st = db()->prepare('SELECT s.id, s.nisn, s.nama, s.jenis_kelamin, s.status, k.nama_kelas, o.nama AS nama_ortu
-                     FROM siswa s JOIN kelas k ON k.id = s.kelas_id LEFT JOIN orang_tua o ON o.id = s.orang_tua_id'
-    . $where . ' ORDER BY k.tingkat, k.nama_kelas, s.nama LIMIT :lim OFFSET :off');
-foreach ($param as $k => $v) $st->bindValue($k, $v);
-$st->bindValue('lim', $per_hal, PDO::PARAM_INT);
-$st->bindValue('off', ($halaman - 1) * $per_hal, PDO::PARAM_INT);
-$st->execute();
-$daftar = $st->fetchAll();
+[$daftar, $halaman, $jml_halaman, $total] = paginasi(
+    'SELECT s.id, s.nisn, s.nama, s.jenis_kelamin, s.status, k.nama_kelas, o.nama AS nama_ortu
+     FROM siswa s JOIN kelas k ON k.id = s.kelas_id LEFT JOIN orang_tua o ON o.id = s.orang_tua_id' . $where . ' ORDER BY k.tingkat, k.nama_kelas, s.nama',
+    'SELECT COUNT(*) FROM siswa s' . $where, $param);
 
 $judul = 'Data Siswa';
 $aksi_header = '<a class="btn btn-primary" href="' . e(url('guru/siswa-form.php')) . '">+ Tambah Siswa</a>';
@@ -112,7 +102,7 @@ require __DIR__ . '/../includes/header.php';
             <tbody>
             <?php foreach ($daftar as $i => $s): ?>
                 <tr>
-                    <td><?= ($halaman - 1) * $per_hal + $i + 1 ?></td>
+                    <td><?= ($halaman - 1) * PER_HALAMAN + $i + 1 ?></td>
                     <td><?= e($s['nisn']) ?></td>
                     <td><strong><?= e($s['nama']) ?></strong></td>
                     <td><?= e($s['jenis_kelamin']) ?></td>
@@ -137,14 +127,7 @@ require __DIR__ . '/../includes/header.php';
         </table>
     </div>
 
-    <?php if ($jml_halaman > 1): ?>
-        <div class="toolbar mt">
-            <?php for ($h = 1; $h <= $jml_halaman; $h++):
-                $qs = http_build_query(['q' => $cari, 'kelas' => $kelas_id, 'hal' => $h]); ?>
-                <a class="btn btn-sm <?= $h === $halaman ? 'btn-primary' : 'btn-light' ?>" href="?<?= e($qs) ?>"><?= (int) $h ?></a>
-            <?php endfor; ?>
-        </div>
-    <?php endif; ?>
+    <?= paginasi_tautan($halaman, $jml_halaman, ['q' => $cari, 'kelas' => $kelas_id]) ?>
     <small>Total <?= (int) $total ?> siswa.</small>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

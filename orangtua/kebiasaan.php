@@ -19,6 +19,7 @@ $poin = total_poin($sid);
 $badge = daftar_badge($poin);
 $harian = kebiasaan_per_hari($sid, 14);
 $riwayat = riwayat_jurnal($sid, 20);
+[$riwayat_tampil, $halaman, $hal_akhir] = paginasi_array($riwayat);
 echo html_pilih_anak($semua_anak, $anak);
 ?>
 <div class="grid-2">
@@ -47,7 +48,7 @@ echo html_pilih_anak($semua_anak, $anak);
         <table class="tabel">
             <thead><tr><th>Tanggal</th><th class="angka">Checklist</th><th>Status</th><th>Apresiasi / Catatan Guru</th></tr></thead>
             <tbody>
-            <?php foreach ($riwayat as $r): ?>
+            <?php foreach ($riwayat_tampil as $r): ?>
                 <tr><td><?= e(hari_tgl_indo($r['tanggal'])) ?></td><td class="angka"><?= (int) $r['jumlah'] ?>/7</td><td><?= pill_status_jurnal($r['status']) ?></td>
                     <td><?php if ($r['status'] !== 'menunggu'): ?><?= $r['apresiasi'] ? '<i class="bi bi-star-fill"></i> ' . e($r['apresiasi']) : '' ?><?= $r['catatan'] ? '<br><small><i class="bi bi-chat-fill"></i> ' . e($r['catatan']) . '</small>' : '' ?><?php endif; ?></td></tr>
             <?php endforeach; ?>
@@ -55,5 +56,6 @@ echo html_pilih_anak($semua_anak, $anak);
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir, ['anak' => $anak['id']]) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

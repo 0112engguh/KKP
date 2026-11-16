@@ -30,12 +30,12 @@ if ($kelas_id > 0) {
 }
 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) { $where .= ' AND j.tanggal = :tgl'; $param['tgl'] = $tanggal; } else { $tanggal = ''; }
 
-$st = db()->prepare('SELECT j.id, j.tanggal, j.status, j.foto_jurnal, s.nama, s.nisn, k.nama_kelas,
-        (SELECT COALESCE(SUM(d.selesai), 0) FROM detail_jurnal_kebiasaan d WHERE d.jurnal_id = j.id) AS jumlah
-    FROM jurnal_kebiasaan j JOIN siswa s ON s.id = j.siswa_id JOIN kelas k ON k.id = s.kelas_id' . $where
-    . " ORDER BY FIELD(j.status, 'menunggu', 'ditolak', 'disetujui'), j.tanggal DESC, s.nama LIMIT 200");
-$st->execute($param);
-$daftar = $st->fetchAll();
+[$daftar, $halaman, $hal_akhir, $total] = paginasi(
+    'SELECT j.id, j.tanggal, j.status, j.foto_jurnal, s.nama, s.nisn, k.nama_kelas,
+            (SELECT COALESCE(SUM(d.selesai), 0) FROM detail_jurnal_kebiasaan d WHERE d.jurnal_id = j.id) AS jumlah
+        FROM jurnal_kebiasaan j JOIN siswa s ON s.id = j.siswa_id JOIN kelas k ON k.id = s.kelas_id' . $where
+    . " ORDER BY FIELD(j.status, 'menunggu', 'ditolak', 'disetujui'), j.tanggal DESC, s.nama",
+    'SELECT COUNT(*) FROM jurnal_kebiasaan j JOIN siswa s ON s.id = j.siswa_id' . $where, $param);
 
 $judul = $status === 'menunggu' ? 'Verifikasi Jurnal Kebiasaan' : 'Jurnal 7 Kebiasaan';
 require __DIR__ . '/../includes/header.php';
@@ -78,6 +78,7 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
-    <small>Menampilkan maksimal 200 jurnal terbaru.</small>
+    <?= paginasi_tautan($halaman, $hal_akhir, ['status' => $status, 'kelas' => $kelas_id, 'tanggal' => $tanggal]) ?>
+    <small>Total <?= (int) $total ?> jurnal.</small>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

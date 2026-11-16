@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $daftar = db()->query('SELECT m.id, m.nama_mapel, m.keterangan, (SELECT COUNT(*) FROM bank_soal b WHERE b.mapel_id = m.id) AS jml_soal
                        FROM mata_pelajaran m ORDER BY m.nama_mapel')->fetchAll();
+[$daftar, $halaman, $hal_akhir] = paginasi_array($daftar);
 
 $judul = 'Mata Pelajaran';
 require __DIR__ . '/../includes/header.php';
@@ -95,6 +96,7 @@ require __DIR__ . '/../includes/header.php';
                 </tbody>
             </table>
         </div>
+        <?= paginasi_tautan($halaman, $hal_akhir) ?>
     </section>
 
     <section class="card">

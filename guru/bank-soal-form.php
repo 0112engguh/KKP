@@ -6,6 +6,22 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
+// Konteks kelompok ujian (child Bank Soal): soal baru langsung ditempel ke kelompok ini
+$kelompok_id = (int) ($_GET['kelompok'] ?? 0);
+$kelompok = null;
+if ($kelompok_id > 0) {
+    $st = db()->prepare('SELECT id, nama_ujian, kelas_id FROM kelompok_ujian WHERE id = :id');
+    $st->execute(['id' => $kelompok_id]);
+    $kelompok = $st->fetch();
+    if (!$kelompok || !punya_kelas($kelas_semua, (int) $kelompok['kelas_id'])) {
+        flash('danger', 'Kelompok ujian tidak ditemukan atau bukan penugasan Anda.');
+        redirect(url('guru/bank-soal.php'));
+    }
+}
+
 $id = (int) ($_GET['id'] ?? 0);
 $data = ['mapel_id' => 0, 'kategori' => '', 'tingkat' => 'sedang', 'pertanyaan' => '', 'gambar' => null, 'kunci_jawaban' => 'A', 'pembahasan' => ''];
 $opsi = ['A' => '', 'B' => '', 'C' => '', 'D' => ''];
@@ -28,6 +44,27 @@ function simpan_gambar_soal(array $berkas): ?string
 {
     if ($berkas['error'] === UPLOAD_ERR_NO_FILE) return null;
     return simpan_gambar(UPLOAD_SOAL_DIR, $berkas);
+}
+
+// Hapus soal dari Bank Soal: diblok bila masih dipakai ujian atau kelompok lain.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'hapus_soal' && $id > 0) {
+    csrf_cek();
+    $st = db()->prepare('SELECT gambar FROM bank_soal WHERE id = :s');
+    $st->execute(['s' => $id]);
+    $gambar = $st->fetchColumn();
+    $dipakai_ujian     = (int) skalar('SELECT COUNT(*) FROM ujian_soal WHERE soal_id = :s', ['s' => $id]);
+    $dipakai_kelompok  = (int) skalar('SELECT COUNT(*) FROM kelompok_ujian_soal WHERE soal_id = :s', ['s' => $id]);
+    if ($dipakai_ujian > 0) {
+        flash('danger', 'Soal tidak dapat dihapus karena sudah dipakai pada ujian.');
+    } elseif ($dipakai_kelompok > 1 || ($dipakai_kelompok === 1 && $kelompok_id === 0)) {
+        // dipakai kelompok lain (atau dari luar konteks kelompok mana pun)
+        flash('danger', 'Soal tidak dapat dihapus karena masih dipakai pada kelompok ujian. Lepas dulu dari kelompok tersebut.');
+    } else {
+        db()->prepare('DELETE FROM bank_soal WHERE id = :s')->execute(['s' => $id]);
+        if ($gambar && is_file(UPLOAD_SOAL_DIR . basename($gambar))) @unlink(UPLOAD_SOAL_DIR . basename($gambar));
+        flash('success', 'Soal berhasil dihapus dari Bank Soal.');
+    }
+    redirect(url($kelompok ? 'guru/bank-soal-detail.php?id=' . $kelompok_id : 'guru/bank-soal.php'));
 }
 
 $galat = [];
@@ -82,6 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $upsert = $pdo->prepare('INSERT INTO opsi_jawaban (soal_id, label, teks) VALUES (:s, :l, :t)
                                      ON DUPLICATE KEY UPDATE teks = VALUES(teks)');
             foreach ($opsi as $label => $teks) $upsert->execute(['s' => $id_baru, 'l' => $label, 't' => $teks]);
+
+            // Soal baru yang dibuat dari halaman kelompok langsung ditempel ke kelompok tsb
+            if ($id === 0 && $kelompok) {
+                $urutan = (int) skalar('SELECT COALESCE(MAX(urutan), 0) FROM kelompok_ujian_soal WHERE kelompok_id = :k', ['k' => $kelompok_id]) + 1;
+                $pdo->prepare('INSERT INTO kelompok_ujian_soal (kelompok_id, soal_id, urutan) VALUES (:k, :s, :u)')
+                    ->execute(['k' => $kelompok_id, 's' => $id_baru, 'u' => $urutan]);
+            }
             $pdo->commit();
 
             // Hapus file gambar lama bila diganti / dihapus
@@ -89,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 @unlink(UPLOAD_SOAL_DIR . basename($gambar_lama));
             }
             flash('success', 'Data berhasil disimpan.');
-            redirect(url('guru/bank-soal.php'));
+            redirect(url($kelompok ? 'guru/bank-soal-detail.php?id=' . $kelompok_id : 'guru/bank-soal.php'));
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($gambar_baru) @unlink(UPLOAD_SOAL_DIR . $gambar_baru);
@@ -100,7 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $judul = $id ? 'Ubah Soal' : 'Tambah Soal';
-$aksi_header = '<a class="btn btn-light" href="' . e(url('guru/bank-soal.php')) . '">&larr; Kembali</a>';
+if ($kelompok) $judul .= ' &mdash; ' . e($kelompok['nama_ujian']);
+$aksi_header = '<a class="btn btn-light" href="' . e(url($kelompok ? 'guru/bank-soal-detail.php?id=' . $kelompok_id : 'guru/bank-soal.php')) . '">&larr; Kembali</a>';
 require __DIR__ . '/../includes/header.php';
 ?>
 <?php foreach ($galat as $g): ?><div class="flash flash-danger"><?= e($g) ?></div><?php endforeach; ?>
@@ -152,6 +197,13 @@ require __DIR__ . '/../includes/header.php';
         <small>Ditampilkan kepada siswa setelah ujian selesai.</small></div>
 
     <button type="submit" class="btn btn-primary">Simpan</button>
-    <a class="btn btn-light" href="<?= e(url('guru/bank-soal.php')) ?>">Batal</a>
+    <a class="btn btn-light" href="<?= e(url($kelompok ? 'guru/bank-soal-detail.php?id=' . $kelompok_id : 'guru/bank-soal.php')) ?>">Batal</a>
 </form>
+<?php if ($id > 0): ?>
+<form method="post" class="card" data-konfirmasi="Hapus soal ini dari Bank Soal secara permanen? Soal yang dipakai ujian atau kelompok lain tidak dapat dihapus.">
+    <?= csrf_field() ?>
+    <input type="hidden" name="aksi" value="hapus_soal">
+    <button type="submit" class="btn btn-danger">Hapus Soal dari Bank</button>
+</form>
+<?php endif; ?>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

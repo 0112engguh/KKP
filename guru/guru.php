@@ -39,6 +39,7 @@ $daftar = db()->query("SELECT g.id, g.nip, g.nama, g.email, r.nama_role,
         (SELECT GROUP_CONCAT(kk.nama_kelas ORDER BY kk.tingkat, kk.nama_kelas SEPARATOR ', ')
              FROM guru_kelas gk JOIN kelas kk ON kk.id = gk.kelas_id WHERE gk.guru_id = g.id) AS kelas_tugas
     FROM guru g JOIN users u ON u.id = g.user_id JOIN roles r ON r.id = u.role_id ORDER BY r.id, g.nama")->fetchAll();
+[$daftar, $halaman, $hal_akhir] = paginasi_array($daftar);
 
 $judul = 'Data Guru';
 $aksi_header = '<a class="btn btn-primary" href="' . e(url('guru/guru-form.php')) . '">+ Tambah Guru</a>';
@@ -74,5 +75,6 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

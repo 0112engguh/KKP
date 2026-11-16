@@ -1,93 +1,137 @@
 <?php
 // guru/bank-soal.php
-// Bank soal: daftar, filter, dan hapus soal pilihan ganda.
+// Halaman utama Bank Soal (parent): daftar Kelompok Ujian beserta filter, cari,
+// tambah/ubah/hapus, ubah status, dan jumlah soal tiap kelompok. Daftar soal
+// per kelompok ada di bank-soal-detail.php.
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/fungsi.php';
 wajib_role(['admin', 'guru']);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'hapus') {
+$kelas_semua = kelas_guru();
+if (!$kelas_semua) akhir_kelas();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_cek();
-    $id = (int) ($_POST['id'] ?? 0);
-    if (skalar('SELECT COUNT(*) FROM ujian_soal WHERE soal_id = :s', ['s' => $id]) > 0) {
-        flash('danger', 'Soal tidak dapat dihapus karena sudah dipakai pada ujian.');
-    } else {
-        $gambar = skalar('SELECT gambar FROM bank_soal WHERE id = :s', ['s' => $id]);
-        db()->prepare('DELETE FROM bank_soal WHERE id = :s')->execute(['s' => $id]);
-        if ($gambar && is_file(UPLOAD_SOAL_DIR . basename($gambar))) @unlink(UPLOAD_SOAL_DIR . basename($gambar));
-        flash('success', 'Soal berhasil dihapus.');
+    $id   = (int) ($_POST['id'] ?? 0);
+    $aksi = $_POST['aksi'] ?? '';
+
+    $st = db()->prepare('SELECT kelas_id FROM kelompok_ujian WHERE id = :id');
+    $st->execute(['id' => $id]);
+    $u_cek = $st->fetch();
+
+    if (!$u_cek || !punya_kelas($kelas_semua, (int) $u_cek['kelas_id'])) {
+        flash('danger', 'Kelompok ujian tidak termasuk kelas yang ditugaskan kepada Anda.');
+    } elseif ($aksi === 'hapus') {
+        // soal di dalam kelompok ikut terlepas, tetapi soal di bank_soal tidak terhapus
+        db()->prepare('DELETE FROM kelompok_ujian WHERE id = :id')->execute(['id' => $id]);
+        flash('success', 'Kelompok ujian berhasil dihapus. Soal di Bank Soal tetap tersimpan.');
+    } elseif ($aksi === 'status') {
+        db()->prepare("UPDATE kelompok_ujian SET status = IF(status = 'aktif', 'draft', 'aktif') WHERE id = :id")
+            ->execute(['id' => $id]);
+        flash('success', 'Status kelompok ujian diperbarui.');
     }
     redirect(url('guru/bank-soal.php'));
 }
 
-$mapel_id = (int) ($_GET['mapel'] ?? 0);
-$tingkat  = $_GET['tingkat'] ?? '';
-$cari     = trim($_GET['q'] ?? '');
+$cari        = trim($_GET['q'] ?? '');
+$tahun       = trim($_GET['tahun'] ?? '');
+$semester    = $_GET['semester'] ?? '';
+$filter_kelas = (int) ($_GET['kelas'] ?? 0);
+$status      = $_GET['status'] ?? '';
 
 $where = ' WHERE 1=1';
 $param = [];
-if ($mapel_id > 0) { $where .= ' AND b.mapel_id = :mapel'; $param['mapel'] = $mapel_id; }
-if (in_array($tingkat, ['mudah', 'sedang', 'sulit'], true)) { $where .= ' AND b.tingkat = :tingkat'; $param['tingkat'] = $tingkat; }
-if ($cari !== '') { $where .= ' AND b.pertanyaan LIKE :cari'; $param['cari'] = '%' . $cari . '%'; }
+if ($cari !== '') { $where .= ' AND k.nama_ujian LIKE :cari'; $param['cari'] = '%' . $cari . '%'; }
+if ($tahun !== '') { $where .= ' AND k.tahun_ajaran = :tahun'; $param['tahun'] = $tahun; }
+if (in_array($semester, ['ganjil', 'genap'], true)) { $where .= ' AND k.semester = :semester'; $param['semester'] = $semester; }
+if ($filter_kelas > 0) { $where .= ' AND k.kelas_id = :kelas'; $param['kelas'] = $filter_kelas; }
+if (in_array($status, ['draft', 'aktif'], true)) { $where .= ' AND k.status = :status'; $param['status'] = $status; }
 
-$st = db()->prepare('SELECT b.id, b.pertanyaan, b.kategori, b.tingkat, b.kunci_jawaban, b.gambar, m.nama_mapel,
-                            (SELECT COUNT(*) FROM ujian_soal us WHERE us.soal_id = b.id) AS dipakai
-                     FROM bank_soal b JOIN mata_pelajaran m ON m.id = b.mapel_id' . $where . ' ORDER BY m.nama_mapel, b.id');
-$st->execute($param);
-$daftar = $st->fetchAll();
+// Guru hanya melihat kelompok dari kelas yang ditugaskan (seperti halaman Ujian)
+if (user()['role'] !== 'admin') {
+    $ids = array_map('intval', array_column($kelas_semua, 'id'));
+    $where .= ' AND k.kelas_id IN (' . implode(',', $ids) . ')';
+}
+
+[$daftar, $halaman, $hal_akhir, $total] = paginasi(
+    'SELECT k.*, kl.nama_kelas,
+        (SELECT COUNT(*) FROM kelompok_ujian_soal ks WHERE ks.kelompok_id = k.id) AS jml_soal,
+        (SELECT COALESCE(SUM(ks.bobot), 0) FROM kelompok_ujian_soal ks WHERE ks.kelompok_id = k.id) AS total_bobot
+    FROM kelompok_ujian k JOIN kelas kl ON kl.id = k.kelas_id' . $where . '
+    ORDER BY k.tahun_ajaran DESC, k.semester DESC, k.nama_ujian',
+    'SELECT COUNT(*) FROM kelompok_ujian k' . $where, $param);
+
+// Pilihan tahun ajaran untuk filter diambil dari data yang ada
+$tahun_ajaran = db()->query('SELECT DISTINCT tahun_ajaran FROM kelompok_ujian ORDER BY tahun_ajaran DESC')->fetchAll(PDO::FETCH_COLUMN);
 
 $judul = 'Bank Soal';
-$aksi_header = '<a class="btn btn-primary" href="' . e(url('guru/bank-soal-form.php')) . '">+ Tambah Soal</a>';
+$aksi_header = '<a class="btn btn-primary" href="' . e(url('guru/kelompok-form.php')) . '">+ Kelompok Ujian</a>';
 require __DIR__ . '/../includes/header.php';
-$warna_tingkat = ['mudah' => 'hijau', 'sedang' => 'kuning', 'sulit' => 'merah'];
 ?>
 <section class="card">
     <form method="get" class="toolbar">
-        <div class="form-grup"><label for="mapel">Mata Pelajaran</label>
-            <select name="mapel" id="mapel"><option value="0">Semua</option>
-                <?php foreach (semua_mapel() as $m): ?>
-                    <option value="<?= (int) $m['id'] ?>" <?= $mapel_id === (int) $m['id'] ? 'selected' : '' ?>><?= e($m['nama_mapel']) ?></option>
-                <?php endforeach; ?>
-            </select></div>
-        <div class="form-grup"><label for="tingkat">Tingkat</label>
-            <select name="tingkat" id="tingkat"><option value="">Semua</option>
-                <?php foreach (['mudah', 'sedang', 'sulit'] as $t): ?>
-                    <option value="<?= e($t) ?>" <?= $tingkat === $t ? 'selected' : '' ?>><?= e(ucfirst($t)) ?></option>
-                <?php endforeach; ?>
-            </select></div>
-        <div class="form-grup"><label for="q">Cari pertanyaan</label>
+        <div class="form-grup"><label for="q">Cari nama ujian</label>
             <input type="search" id="q" name="q" value="<?= e($cari) ?>"></div>
-        <button class="btn btn-primary" type="submit">Cari</button>
+        <div class="form-grup"><label for="tahun">Tahun Ajaran</label>
+            <select name="tahun" id="tahun"><option value="">Semua</option>
+                <?php foreach ($tahun_ajaran as $t): ?>
+                    <option value="<?= e($t) ?>" <?= $tahun === $t ? 'selected' : '' ?>><?= e($t) ?></option>
+                <?php endforeach; ?>
+            </select></div>
+        <div class="form-grup"><label for="semester">Semester</label>
+            <select name="semester" id="semester"><option value="">Semua</option>
+                <option value="ganjil" <?= $semester === 'ganjil' ? 'selected' : '' ?>>Ganjil</option>
+                <option value="genap" <?= $semester === 'genap' ? 'selected' : '' ?>>Genap</option>
+            </select></div>
+        <div class="form-grup"><label for="kelas">Kelas</label>
+            <select name="kelas" id="kelas"><option value="0">Semua</option>
+                <?php foreach ($kelas_semua as $k): ?>
+                    <option value="<?= (int) $k['id'] ?>" <?= $filter_kelas === (int) $k['id'] ? 'selected' : '' ?>><?= e($k['nama_kelas']) ?></option>
+                <?php endforeach; ?>
+            </select></div>
+        <div class="form-grup"><label for="status">Status</label>
+            <select name="status" id="status"><option value="">Semua</option>
+                <option value="draft" <?= $status === 'draft' ? 'selected' : '' ?>>Draft</option>
+                <option value="aktif" <?= $status === 'aktif' ? 'selected' : '' ?>>Aktif</option>
+            </select></div>
+        <button class="btn btn-primary" type="submit">Terapkan</button>
+        <a class="btn btn-light" href="<?= e(url('guru/bank-soal.php')) ?>">Reset</a>
     </form>
 
     <div class="tabel-wrap">
         <table class="tabel">
-            <thead><tr><th>No</th><th>Pertanyaan</th><th>Mapel</th><th>Kategori</th><th>Tingkat</th><th class="angka">Kunci</th><th class="angka">Dipakai</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Nama Ujian</th><th>Tahun Ajaran</th><th>Semester</th><th>Kelas</th>
+                <th class="angka">Soal</th><th class="angka">Total Bobot</th><th>Status</th><th>Aksi</th></tr></thead>
             <tbody>
-            <?php foreach ($daftar as $i => $s): ?>
+            <?php foreach ($daftar as $k): ?>
                 <tr>
-                    <td><?= $i + 1 ?></td>
-                    <td><?= e(mb_strimwidth($s['pertanyaan'], 0, 90, '...')) ?><?= $s['gambar'] ? ' <i class="bi bi-image-fill"></i>' : '' ?></td>
-                    <td><?= e($s['nama_mapel']) ?></td>
-                    <td><?= e($s['kategori'] ?? '-') ?></td>
-                    <td><?= pill(ucfirst($s['tingkat']), $warna_tingkat[$s['tingkat']]) ?></td>
-                    <td class="angka"><strong><?= e($s['kunci_jawaban']) ?></strong></td>
-                    <td class="angka"><?= (int) $s['dipakai'] ?>x</td>
+                    <td><strong><?= e($k['nama_ujian']) ?></strong></td>
+                    <td><?= e($k['tahun_ajaran']) ?></td>
+                    <td><?= pill(ucfirst($k['semester']), $k['semester'] === 'ganjil' ? 'biru' : 'kuning') ?></td>
+                    <td><?= e($k['nama_kelas']) ?></td>
+                    <td class="angka"><strong><?= (int) $k['jml_soal'] ?></strong></td>
+                    <td class="angka"><?= angka($k['total_bobot'], 2) ?></td>
+                    <td><?= $k['status'] === 'aktif' ? pill('Aktif', 'hijau') : pill('Draft', 'abu') ?></td>
                     <td><div class="aksi-baris">
-                        <a class="btn btn-light btn-sm" href="<?= e(url('guru/bank-soal-form.php?id=' . (int) $s['id'])) ?>">Ubah</a>
-                        <form method="post" class="inline" data-konfirmasi="Hapus soal ini?">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="aksi" value="hapus">
-                            <input type="hidden" name="id" value="<?= (int) $s['id'] ?>">
+                        <a class="btn btn-primary btn-sm" href="<?= e(url('guru/bank-soal-detail.php?id=' . (int) $k['id'])) ?>">Buka</a>
+                        <a class="btn btn-light btn-sm" href="<?= e(url('guru/kelompok-form.php?id=' . (int) $k['id'])) ?>">Ubah</a>
+                        <form method="post" class="inline">
+                            <?= csrf_field() ?><input type="hidden" name="aksi" value="status"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
+                            <button class="btn btn-warning btn-sm" type="submit"><?= $k['status'] === 'aktif' ? 'Jadikan Draft' : 'Aktifkan' ?></button>
+                        </form>
+                        <form method="post" class="inline" data-konfirmasi="Hapus kelompok ujian ini? Soal di Bank Soal tidak ikut terhapus.">
+                            <?= csrf_field() ?><input type="hidden" name="aksi" value="hapus"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
                             <button class="btn btn-danger btn-sm" type="submit">Hapus</button>
                         </form>
                     </div></td>
                 </tr>
             <?php endforeach; ?>
-            <?php if (!$daftar): ?><tr><td colspan="8" class="kosong">Belum ada soal.</td></tr><?php endif; ?>
+            <?php if (!$daftar): ?><tr><td colspan="8" class="kosong">Belum ada kelompok ujian.</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>
-    <small>Total <?= count($daftar) ?> soal.</small>
+    <?= paginasi_tautan($halaman, $hal_akhir, ['q' => $cari, 'tahun' => $tahun, 'semester' => $semester, 'kelas' => $filter_kelas, 'status' => $status]) ?>
+    <small>Total <?= count($daftar) ?> kelompok ujian pada halaman ini (total <?= (int) $total ?>).</small>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

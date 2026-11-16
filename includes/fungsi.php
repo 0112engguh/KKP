@@ -110,6 +110,54 @@ function skalar(string $sql, array $param = [])
     return $st->fetchColumn();
 }
 
+/* ---------- Pagination ---------- */
+
+const PER_HALAMAN = 20;
+
+// Ambil satu halaman baris: SQL utama (tanpa LIMIT/OFFSET) + SQL COUNT dengan filter yang sama.
+// $key = nama parameter nomor halaman di URL ('hal', atau 'hal2' bila satu halaman punya dua tabel).
+// Mengembalikan [daftar, halaman_aktif, halaman_akhir, total].
+function paginasi(string $sql, string $sql_jumlah, array $param = [], int $per = PER_HALAMAN, string $key = 'hal'): array
+{
+    $total = (int) skalar($sql_jumlah, $param);
+    $halaman_akhir = max(1, (int) ceil($total / $per));
+    $halaman = min(max(1, (int) ($_GET[$key] ?? 1)), $halaman_akhir);
+    $st = db()->prepare($sql . ' LIMIT :lim OFFSET :off');
+    foreach ($param as $k => $v) $st->bindValue($k, $v);
+    $st->bindValue('lim', $per, PDO::PARAM_INT);
+    $st->bindValue('off', ($halaman - 1) * $per, PDO::PARAM_INT);
+    $st->execute();
+    return [$st->fetchAll(), $halaman, $halaman_akhir, $total];
+}
+
+// Paginasi dari array yang sudah terambil (mis. data yang dipakai grafik harus lengkap).
+function paginasi_array(array $baris, int $per = PER_HALAMAN, string $key = 'hal'): array
+{
+    $halaman_akhir = max(1, (int) ceil(count($baris) / $per));
+    $halaman = min(max(1, (int) ($_GET[$key] ?? 1)), $halaman_akhir);
+    return [array_slice($baris, ($halaman - 1) * $per, $per), $halaman, $halaman_akhir, count($baris)];
+}
+
+// Tombol nomor halaman. $get = filter yang dipertahankan di URL; $key = nama parameter halaman.
+// Memakai class .toolbar sehingga otomatis tersembunyi saat dicetak.
+function paginasi_tautan(int $halaman, int $halaman_akhir, array $get = [], string $key = 'hal'): string
+{
+    if ($halaman_akhir <= 1) return '';
+    ob_start();
+    echo '<div class="toolbar mt">';
+    for ($h = 1; $h <= $halaman_akhir; $h++) {
+        // Bila banyak halaman, tampilkan jendela di sekitar halaman aktif dengan elipsis
+        if ($halaman_akhir > 7 && $h > 1 && $h < $halaman_akhir && abs($h - $halaman) > 1) {
+            if ($h === 2 || $h === $halaman_akhir - 1) echo '<span class="pill pill-abu">...</span>';
+            continue;
+        }
+        $aktif = $h === $halaman;
+        echo '<a class="btn btn-sm ' . ($aktif ? 'btn-primary' : 'btn-light') . '" href="?' . e(http_build_query(array_replace($get, [$key => $h]))) . '">' . (int) $h . '</a>';
+    }
+    echo '</div>';
+    return ob_get_clean();
+}
+
 function siswa_login(): ?array
 {
     $u = user();

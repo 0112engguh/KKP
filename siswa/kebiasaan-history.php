@@ -10,6 +10,7 @@ if (!$siswa) redirect(url('auth/logout.php'));
 
 $riwayat = riwayat_jurnal((int) $siswa['id'], 30);
 $harian = kebiasaan_per_hari((int) $siswa['id'], 14);
+[$riwayat_tampil, $halaman, $hal_akhir] = paginasi_array($riwayat);
 
 $judul = 'History 7 Kebiasaan';
 require __DIR__ . '/../includes/header.php';
@@ -26,7 +27,7 @@ require __DIR__ . '/../includes/header.php';
         <table class="tabel">
             <thead><tr><th>Tanggal</th><th class="angka">Checklist</th><th>Status</th><th>Apresiasi / Catatan Guru</th></tr></thead>
             <tbody>
-            <?php foreach ($riwayat as $r): ?>
+            <?php foreach ($riwayat_tampil as $r): ?>
                 <tr>
                     <td><?= e(hari_tgl_indo($r['tanggal'])) ?></td>
                     <td class="angka"><?= (int) $r['jumlah'] ?>/7</td>
@@ -40,5 +41,6 @@ require __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+    <?= paginasi_tautan($halaman, $hal_akhir) ?>
 </section>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

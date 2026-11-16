@@ -41,7 +41,7 @@ function menu_sidebar(string $role): array
         ['Input Absensi', 'guru/absensi.php', '<i class="bi bi-pen-fill"></i>'],
         ['Rekap Absensi', 'guru/absensi-rekap.php', '<i class="bi bi-calendar-week-fill"></i>'],
         ['TKA', null, null],
-        ['Bank Soal', 'guru/bank-soal.php', '<i class="bi bi-puzzle-fill"></i>', ['guru/bank-soal-form.php']],
+        ['Bank Soal', 'guru/bank-soal.php', '<i class="bi bi-puzzle-fill"></i>', ['guru/bank-soal-form.php', 'guru/kelompok-form.php', 'guru/bank-soal-detail.php']],
         ['Ujian', 'guru/ujian.php', '<i class="bi bi-pencil-square"></i>', ['guru/ujian-form.php']],
         ['Hasil Ujian', 'guru/hasil-ujian.php', '<i class="bi bi-bar-chart-fill"></i>'],
         ['Analisis Soal', 'guru/analisis-soal.php', '<i class="bi bi-search"></i>'],
